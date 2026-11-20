@@ -8,27 +8,15 @@
 #include <string>
 
 #include <stdint.h>
+#include "melodica/blowfish.h"
 
 class BlowFish {
 public:
     using size_type = uint32_t;
 
 private:
-    static constexpr int NumberOfPasses = 16; // SBox passes; must be even
-    static constexpr int MaximumKeyBytes = 56; // 448 bits max
-    
-    using PArray = uint32_t [NumberOfPasses + 2];
-    using SBoxes = uint32_t [4][256];
+    MelodicaBlowfish cipher;
     enum class Action { Encrypt, Decrypt };
-
-    static const PArray InitialPArray;
-    static const SBoxes InitialSBoxes;
-
-    PArray parray;
-    SBoxes sboxes;
-    uint32_t fFunction (uint32_t in) const;
-    void encipher (uint32_t *left_32, uint32_t *right_32) const;
-    void decipher (uint32_t *left_32, uint32_t *right_32) const;
 
     void encrypt_or_decrypt (Action action,
                              const uint8_t *input,

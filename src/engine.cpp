@@ -12,6 +12,12 @@
 #include <config.h>
 
 #include <stdexcept>
+#include <chrono>
+#include <cstdlib>
+#include <thread>
+#ifdef HAVE_LIBCURL
+#include "httpclient.h"
+#endif
 #include <functional>
 
 #include <football/football.h>
@@ -222,6 +228,9 @@ ResponseGroup AudioEngine::cleanupPlayer (void) {
 
     // Move the completed song to the history, then trim history
     song_history.push_front (current_song.get());
+    scrobbleStart = 0;
+    scrobblePosition = scrobbleTick = scrobbleHeard = 0;
+    scrobbleNow = scrobbleFinal = false;
     current_song = nullptr;
     while (song_history.size() > history_size) {
         song_history.pop_back();
@@ -242,6 +251,39 @@ float AudioEngine::monitorPlayer (void) {
     assert (player);
     assert (player->ready());
     long playpoint = player->playPoint();
+#ifdef HAVE_LIBCURL
+    const char *token = std::getenv("MELODICA_SCROBBLE_TOKEN");
+    if (token && *token && current_song && current_song->isMelodicaTrack() && !current_song->artist().empty() && !current_song->title().empty()) {
+        const double tick = std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count();
+        const double elapsed = tick - scrobbleTick, movement = playpoint - scrobblePosition;
+        const bool moving = playback_state == PlaybackState::PLAYING && playpoint > 0;
+        if (moving && scrobbleTick && elapsed < 8 && movement > 0 && movement <= elapsed + 1)
+            scrobbleHeard += std::min(movement, elapsed);
+        scrobblePosition = playpoint;
+        scrobbleTick = tick;
+        const double remaining = player->playRemaining();
+        const double duration = remaining >= 0 ? playpoint + remaining : 0;
+        bool due = !scrobbleFinal && duration > 30 && scrobbleHeard >= std::min(duration/2,240.0);
+        if (moving && (!scrobbleNow || due)) {
+            const bool final = scrobbleNow;
+            if (final) scrobbleFinal = true;
+            else { scrobbleNow = true; scrobbleStart = time(nullptr); }
+            auto info = Parsnip::Data::make_dictionary<Parsnip::Data>({{"submission_client","pianod2 Melodica"},{"music_service","pandora.com"}});
+            auto meta = Parsnip::Data::make_dictionary<Parsnip::Data>({{"artist_name",current_song->artist()},{"track_name",current_song->title()},{"release_name",current_song->albumTitle()},{"additional_info",info}});
+            auto listen = Parsnip::Data::make_dictionary<Parsnip::Data>({{"track_metadata",meta}});
+            if (final) listen["listened_at"] = static_cast<int64_t>(scrobbleStart);
+            // The request owns a copy of the metadata and token before the song can change.
+            HttpClient::Request req;
+            req.type = HttpClient::RequestType::Post;
+            req.URL = "https://spacegho.st/scrobble/1/submit-listens";
+            req.timeout = 8;
+            req.headers["Authorization"] = std::string("Token ") + token;
+            req.headers["Content-Type"] = "application/json";
+            req.body = std::string("{\"listen_type\":\"") + (final ? "single" : "playing_now") + "\",\"payload\":[" + listen.toJson() + "]}";
+            std::thread([req]() { try { HttpClient client; client.performHttpRequest(req); } catch (const std::exception &) {} }).detach();
+        }
+    }
+#endif
 
     ResponseGroup status_messages;
     if (track_announced != Announced::COMPLETELY) {

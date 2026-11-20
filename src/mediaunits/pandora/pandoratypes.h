@@ -55,6 +55,9 @@ namespace Pandora {
 
     /// Playable song: a song with playback information.
     class PlayableSong : public Song {
+    public:
+        bool isMelodicaTrack() const override { return true; }
+    private:
         friend Source;
         friend Song;
 

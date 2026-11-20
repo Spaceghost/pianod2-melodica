@@ -1,3 +1,9 @@
+Ubuntu 24.04 (x86-64): install the release .deb, then start the server with melodica-pianod2 -c /usr/share/melodica-pianod2/html. The packaged control client is /usr/share/melodica-pianod2/piano.
+
+pianod2 for Melodica
+
+Build release 421 with Pandora support using the original configure and make instructions below. Its Pandora media source uses the Melodica tuner codec. Set MELODICA_SCROBBLE_TOKEN for the account running the server to your personal client token from https://spacegho.st/scrobble/account/. All listeners sharing that server then contribute its Pandora playback to that account. Remove the variable and restart to disconnect. Local files and station inserts are excluded.
+
 pianod
 ======
 pianod is a daemon style music player that supports multiple sources.

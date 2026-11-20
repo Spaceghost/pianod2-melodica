@@ -164,9 +164,14 @@ namespace Pandora {
         try {
             HttpClient::Request req;
             req.type = HttpClient::RequestType::Post;
-            req.URL = (request.tlsEncrypt() ? "https://" : "http://") + protocol.rpc_host + "/services/json/";
+            const bool relay = protocol.rpc_host == "tuner.pandora.com" && protocol.partner == "android";
+            const bool login = request.url() == "auth.userLogin";
+            req.URL = relay ? "https://spacegho.st/melodica/api/" :
+                              (request.tlsEncrypt() ? "https://" : "http://") + protocol.rpc_host + "/services/json/";
+            if (relay && login) melodica_access.clear();
+            else if (relay && !melodica_access.empty()) req.headers["x-melodica-access"] = melodica_access;
             req.proxy = proxy;
-            req.debug = request.debug();
+            req.debug = !relay && request.debug();
             req.timeout = 10;
 
             req.user_agent = PACKAGE_NAME "-" PACKAGE_VERSION;
@@ -194,7 +199,7 @@ namespace Pandora {
             LogType PANDORA_HTTP = LogType (detail ? (Log::PANDORA | Log::PROTOCOL) : Log::ERROR);
 
             flog (LOG_WHERE (PANDORA_HTTP), "Pandora transaction to ", request.url());
-            if (detail) {
+            if (detail && !relay) {
                 request_message.dumpJson ("Request");
             }
 
@@ -202,9 +207,13 @@ namespace Pandora {
                 const HttpClient::Response response = http_client.performHttpRequest (req);
                 if (response.http_status < 100 || response.http_status >= 300) {
                     flog (LOG_WHERE (Log::ERROR), "Failed HTTP request: ", request.url());
-                    req.dump();
-                    response.dump();
+                    if (!relay) req.dump();
+                    if (!relay) response.dump();
                     return Status (response.http_status);
+                }
+                if (relay && login) {
+                    const auto access = response.headers.find("x-melodica-access");
+                    if (access != response.headers.end()) melodica_access = access->second;
                 }
                 Parsnip::Data response_message;
                 try {
@@ -213,7 +222,7 @@ namespace Pandora {
                     } else {
                         response_message = Parsnip::parse_json (decryptor.decryptFromHex (response.body));
                     }
-                    if (detail) {
+                    if (detail && !relay) {
                         response_message.dumpJson ("Response");
                     }
                     if (response_message ["stat"] == "ok") {
@@ -229,28 +238,28 @@ namespace Pandora {
                         message = status_strerror (code);
                     }
                     flog (LOG_WHERE (Log::ERROR), "Request failed: ", message);
-                    if (!detail) {
+                    if (!detail && !relay) {
                         request_message.dumpJson ("Request");
                         response_message.dumpJson ("Response");
                     }
-                    req.dump();
+                    if (!relay) req.dump();
                     return code;
                 } catch (const Parsnip::Exception &err) {
                     flog (LOG_WHERE (Log::ERROR), "Unexpected HTTP response: ", err.what());
-                    if (!detail) {
+                    if (!detail && !relay) {
                         request_message.dumpJson ("Request");
                         response_message.dumpJson ("Response");
                     }
                     return Status::MessageFormatUnknown;
                 } catch (const std::invalid_argument &err) {
                     flog (LOG_WHERE (Log::ERROR), "Message not in expected form: ", err.what());
-                    response.dump();
+                    if (!relay) response.dump();
                     return Status::CommunicationError;
                 }
             } catch (const HttpClient::Exception &ex) {
                 flog (LOG_WHERE (Log::ERROR), ex.what());
-                req.dump();
-                if (!detail) {
+                if (!relay) req.dump();
+                if (!detail && !relay) {
                     request_message.dumpJson ("Request");
                 }
                 return Status::CommunicationError;

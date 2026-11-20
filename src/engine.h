@@ -84,6 +84,9 @@ private:
 
     PianodService *service = nullptr;
 
+    double scrobblePosition = 0, scrobbleTick = 0, scrobbleHeard = 0;
+    time_t scrobbleStart = 0;
+    bool scrobbleNow = false, scrobbleFinal = false;
     Retainer <PianodSong *> current_song = nullptr;
     Retainer <PianodSong *> cueing_song = nullptr;
     SongList requests;

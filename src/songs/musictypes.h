@@ -367,6 +367,7 @@ public:
     inline time_t lastPlayed (void) const { return last_played; };
     inline void lastPlayed (time_t t) { last_played = t; };
 
+    virtual bool isMelodicaTrack() const { return false; }
     virtual const std::string &title (void) const = 0; ///< Get the song's title
     virtual PianodPlaylist *playlist (void) const = 0; ///< Get a playlist instance
     virtual const std::string &playlistName (void) const;

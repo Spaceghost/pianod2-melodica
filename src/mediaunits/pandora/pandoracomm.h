@@ -85,6 +85,7 @@ namespace Pandora {
         std::string password;
         std::string proxy;
         
+        std::string melodica_access;
         std::string partner_auth_token; ///< Partner authorization token, for JSON protocol.
         std::string partner_id;
         std::string user_auth_token; ///< Authorization token, retrieved during login.
