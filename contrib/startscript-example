@@ -1,0 +1,83 @@
+# This is a sample startscript for pianod.
+# It's read in at startup, just as if this was entered by an administrator.
+# For commands, `nc localhost 4445` to connect to pianod,
+# and enter the command HELP.  For details, use HELP <command>.
+
+# Allow listening visitors reasonable visibility
+SET VISITOR RANK LISTENER
+
+# Set number of songs in history; after this count, history is lost.
+SET HISTORY LENGTH 10
+
+# ### Logging ###
+# Logging categories:
+#   Responses: state information successes diagnostics errors failures
+#   Misc: general warnings actions protocol allocs caches
+#   Playback: biasing tuning audio
+#   Media: metadata pandora filesystem
+logging set warnings failures audio
+
+# Football
+# 0 = log nothing but errors.  0x1 adds warnings
+# 0x?0 = connection, 0x?00 = TLS, 0x?000 = HTTP
+#    ? = 1 for status, 2 for error 4 for traffic
+# 0x3331 logs football warnings and connection initiations/errors
+# and non-connection related football warnings.
+SET FOOTBALL LOGGING FLAGS 0x3331
+
+# ### Audio ###
+# Override default audio library: avfoundation, libao, libsdl, libavdevice
+# ROOM RECONFIGURE LIBRARY libavdevice
+
+# Choose a driver.  Values depend on audio library.
+# Leaving this unset lets the output library choose for itself.
+# ROOM RECONFIGURE DRIVER alsa
+
+# Choose a specific device.  Values depend on audio library/driver.
+# ROOM RECONFIGURE DEVICE somevalue
+
+# Choose a device number.  Values depend on audio library/driver.
+# ROOM RECONFIGURE DEVICE somenumber
+
+# Audio device options.  Values depend on library/driver.
+# Some libavdevice drivers are experimental and return an "Experimental
+# feature" error, unless "strict=experimental" option is set.
+# ROOM RECONFIGURE OPTIONS strict=experimental
+
+# Audio destination for netcast protocols.  Values depend on library/driver.
+# ROOM RECONFIGURE SERVER ip_or_uri_or_something
+
+# How much to overlap songs when crossfading, in seconds.  0=off.
+# CROSSFADE DURATION 2
+
+# Amount of fade when crossfading, in decibels
+# CROSSFADE LEVEL 6
+
+
+
+# ### Autotuning ###
+# Autotuning will automatically adjust selected playlists based on
+# listener presence, either by login or some other proximity scheme.
+# Try to mix at least this many playlist when autotuning
+# These parameters tune the autotuning algorithms.
+# AUTOTUNE MODE QUANTITY GOAL 10
+
+# Set the autotune quality requirement, in ratings difference.
+# AUTOTUNE MODE QUALITY MARGIN 1.0
+
+# Set the autotune veto, rejection, and inclusion levels, in ratings.
+# AUTOTUNE MODE VETO rating
+# AUTOTUNE MODE REJECT rating
+# AUTOTUNE MODE INCLUDE rating
+
+# ### Default action ###
+# How to choose random songs: song, album, artist, playlist, or random
+# Default is by song.
+# QUEUE RANDOMIZE BY PLAYLIST
+
+# Default mode: Autotune playlists, but don't play
+# SELECT AUTO
+# Default mode: Start playing a mix when launched
+# PLAY MIX
+# Default mode: play requests if submitted
+PLAY REQUEST

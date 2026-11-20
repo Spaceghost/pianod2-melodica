@@ -1,0 +1,18 @@
+pianod
+======
+pianod is a daemon style music player that supports multiple sources.
+
+- mix from multiple sources
+- interface it as a music player backend to home automation systems
+- multiple outputs, each with their own users and audio ("rooms")
+- script playlist changes and mixing via at(1), nc(1) and/or shell scripts
+- automatic playlist selection (autotuning) based on music preferences of
+  those connected/present/listening.
+- Includes a web-based client served with the integrated web server.
+- Or write your own using line-oriented or websocket protocols.
+
+The project home page is: http://deviousfish.com/pianod
+
+See AUTHORS for a list of authors and contributors.
+See COPYING for license information.
+See INSTALL for installation instructions.

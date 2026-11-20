@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+<meta name="generator" content=
+"HTML Tidy for HTML5 for Linux version 5.9.8">
+<meta charset="UTF-8">
+<title>pianod Notenbetrachter</title>
+<meta name="viewport" content="width=device-width">
+<meta name="application-name" content="pianod-viewer">
+<link href="viewer.css" rel="stylesheet" type="text/css">
+<link rel="shortcut icon" href="/Pianod/pianod-icon.gif">
+<link rel="apple-touch-icon-precomposed" href=
+"/Pianod/pianod-button.gif">
+</head>
+<body>
+<noscript>
+<h1>pianod Notenbetrachter</h1>
+Sorry, JavaScript ist erforderlich, um diese Seite zu nutzen.</noscript>
+<div id="pianod" class="pianodviewer">
+<div class="offline">
+<p class="identity">pianod Notenbetrachter<br>
+Urheberrecht © 2011-2021 Devious Fish<br>
+Alle Rechte vorbehalten.<br>
+unter der MIT-Lizenz veröffentlicht.</p>
+Nicht angeschlossen, um beispielsweise pianod.</div>
+<div class="idle">
+<p class="identity">pianod Notenbetrachter<br>
+Urheberrecht © 2011-2021 Devious Fish<br>
+Alle Rechte vorbehalten.<br>
+unter der MIT-Lizenz veröffentlicht.</p>
+Nichts spielen.</div>
+<div class="playing">
+<div class="albumcover"><img src="no-art.jpeg" class="albumart"
+alt='' ondblclick="trackview.showart ();"></div>
+<div class="playbackstatus stalled"><span>〈•••〉</span><br>
+Wiedergabe Stalled<br>
+Netzwerkverbindung prüfen</div>
+<div class="playbackstatus paused"><span>||</span><br>
+Angehalten</div>
+<div class="trackname"> <span class=
+"value">&nbsp;</span> </div>
+<div class="artistname">durch <span class=
+"value">&nbsp;</span> </div>
+<div class="albumname">auf <span class=
+"value">&nbsp;</span></div>
+<div class="songplaylist">auf <span class=
+"value">&nbsp;</span> </div>
+<div class="controller">
+<div class="statusbar">
+<div class="progressbar" style="width:50%;"><span style=
+"display:none;">&nbsp;</span></div>
+</div>
+<span class="timepoint time">&nbsp;</span> <span class=
+"duration time">&nbsp;</span></div>
+</div>
+</div>
+<script type="module">
+      window.assert = function() {};
+      
+        import { Viewer } from './viewer.lib.jsm';
+      
+      var viewer = new Viewer (Viewer.Finder.getBestURL());
+</script>
+</body>
+</html>

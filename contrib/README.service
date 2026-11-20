@@ -1,0 +1,32 @@
+== Systemd Service Unit Files for pianod ==
+`pianod.service` provides for running pianod as a service under `systemd`
+flavors of Linux with Pulse Audio, as is quite common.  Tailor to your
+your needs when installing.
+
+== Installation ==
+To add the service to your systemd Linux system, copy `pianod.service` to 
+  /usr/local/lib/systemd/system/pianod.service
+
+To ask systemd to recognize the new file or any changes you subsequently
+make:
+  systemctl daemon-reload
+
+You should then be able to control the pianod service using systemctl:
+  systemctl start pianod
+  systemctl status pianod
+  systemctl stop pianod
+
+To set up the service to run at boot:
+  systemctl enable pianod
+
+To disable:
+  systemctl disable pianod
+
+
+== Support ==
+These files are provided as is.  If you need support, you can try asking on the 
+pianod mailing list:
+  http://lists.deviousfish.com/listinfo.cgi/pianod-deviousfish.com
+
+For RaspberryPi support, you could also try the RaspberryPi forums:
+  http://www.raspberrypi.org/phpBB3/

@@ -1,0 +1,515 @@
+/* config.h.in.  Generated from configure.ac by autoheader.  */
+
+/* Define to @autoreleasepool if supported, else empty. */
+#undef AUTORELEASEPOOL
+
+/* Define to compile with accesscontrol included. */
+#undef HAVE_ACCESSCONTROL
+
+/* Define to 1 if you have the <ao/ao.h> header file. */
+#undef HAVE_AO_AO_H
+
+/* Define to 1 if you have the <arpa/inet.h> header file. */
+#undef HAVE_ARPA_INET_H
+
+/* Define to 1 if you have the <assert.h> header file. */
+#undef HAVE_ASSERT_H
+
+/* Define to 1 if you have the `avformat_alloc_output_context2' function. */
+#undef HAVE_AVFORMAT_ALLOC_OUTPUT_CONTEXT2
+
+/* Define to 1 if you have the `av_muxer_iterate' function. */
+#undef HAVE_AV_MUXER_ITERATE
+
+/* Define to 1 if you have the `av_output_audio_device_next' function. */
+#undef HAVE_AV_OUTPUT_AUDIO_DEVICE_NEXT
+
+/* Define to 1 if you have the `av_register_all' function. */
+#undef HAVE_AV_REGISTER_ALL
+
+/* Define to 1 if you have the `canonicalize_file_name' function. */
+#undef HAVE_CANONICALIZE_FILE_NAME
+
+/* Define to compile with compression included. */
+#undef HAVE_COMPRESSION
+
+/* Define to 1 if you have the <crypt.h> header file. */
+#undef HAVE_CRYPT_H
+
+/* Define to 1 if you have the <curl/curl.h> header file. */
+#undef HAVE_CURL_CURL_H
+
+/* define if the compiler supports basic C++14 syntax */
+#undef HAVE_CXX14
+
+/* Define to 1 if you have the <dirent.h> header file. */
+#undef HAVE_DIRENT_H
+
+/* Define to 1 if you have the <errno.h> header file. */
+#undef HAVE_ERRNO_H
+
+/* Define to 1 if you have the <fcntl.h> header file. */
+#undef HAVE_FCNTL_H
+
+/* Define to compile with ffmpeg included. */
+#undef HAVE_FFMPEG
+
+/* Define to compile with filesystem included. */
+#undef HAVE_FILESYSTEM
+
+/* Define to 1 if you have the <getopt.h> header file. */
+#undef HAVE_GETOPT_H
+
+/* Set to 1 if getprogname/setprogname is available */
+#undef HAVE_GETPROGNAME
+
+/* Define to 1 if you have the `getrusage' function. */
+#undef HAVE_GETRUSAGE
+
+/* Define to 1 if you have the <gnutls/gnutls.h> header file. */
+#undef HAVE_GNUTLS_GNUTLS_H
+
+/* Define to 1 if you have the `gnutls_sec_param_to_pk_bits' function. */
+#undef HAVE_GNUTLS_SEC_PARAM_TO_PK_BITS
+
+/* Define to 1 if you have the `gnutls_transport_set_int2' function. */
+#undef HAVE_GNUTLS_TRANSPORT_SET_INT2
+
+/* Define to 1 if you have the <grp.h> header file. */
+#undef HAVE_GRP_H
+
+/* Define to 1 if you have the <gst/gst.h> header file. */
+#undef HAVE_GST_GST_H
+
+/* Define to 1 if the system has the type `int32_t'. */
+#undef HAVE_INT32_T
+
+/* Define to 1 if the system has the type `int64_t'. */
+#undef HAVE_INT64_T
+
+/* Define to 1 if you have the <inttypes.h> header file. */
+#undef HAVE_INTTYPES_H
+
+/* Define this symbol if you have IPV6 support */
+#undef HAVE_IPV6
+
+/* Define to compile with libao included. */
+#undef HAVE_LIBAO
+
+/* Define this symbol for libavcodec package. */
+#undef HAVE_LIBAVCODEC
+
+/* Define to 1 if you have the <libavcodec/avcodec.h> header file. */
+#undef HAVE_LIBAVCODEC_AVCODEC_H
+
+/* Define to compile with libavdevice included. */
+#undef HAVE_LIBAVDEVICE
+
+/* Define to 1 if you have the <libavdevice/avdevice.h> header file. */
+#undef HAVE_LIBAVDEVICE_AVDEVICE_H
+
+/* Define this symbol for libavfilter package. */
+#undef HAVE_LIBAVFILTER
+
+/* Define to 1 if you have the <libavfilter/avfiltergraph.h> header file. */
+#undef HAVE_LIBAVFILTER_AVFILTERGRAPH_H
+
+/* Define to 1 if you have the <libavfilter/avfilter.h> header file. */
+#undef HAVE_LIBAVFILTER_AVFILTER_H
+
+/* Define to 1 if you have the <libavfilter/buffersink.h> header file. */
+#undef HAVE_LIBAVFILTER_BUFFERSINK_H
+
+/* Define to 1 if you have the <libavfilter/buffersrc.h> header file. */
+#undef HAVE_LIBAVFILTER_BUFFERSRC_H
+
+/* Define this symbol for libavformat package. */
+#undef HAVE_LIBAVFORMAT
+
+/* Define to 1 if you have the <libavformat/avformat.h> header file. */
+#undef HAVE_LIBAVFORMAT_AVFORMAT_H
+
+/* Define this symbol for libavutil package. */
+#undef HAVE_LIBAVUTIL
+
+/* Define to 1 if you have the <libavutil/avstring.h> header file. */
+#undef HAVE_LIBAVUTIL_AVSTRING_H
+
+/* Define to 1 if you have the <libavutil/avutil.h> header file. */
+#undef HAVE_LIBAVUTIL_AVUTIL_H
+
+/* Define to 1 if you have the <libavutil/channel_layout.h> header file. */
+#undef HAVE_LIBAVUTIL_CHANNEL_LAYOUT_H
+
+/* Define to 1 if you have the <libavutil/dict.h> header file. */
+#undef HAVE_LIBAVUTIL_DICT_H
+
+/* Define to 1 if you have the <libavutil/opt.h> header file. */
+#undef HAVE_LIBAVUTIL_OPT_H
+
+/* Define to 1 if you have the <libavutil/replaygain.h> header file. */
+#undef HAVE_LIBAVUTIL_REPLAYGAIN_H
+
+/* Define to 1 if you have the `bz2' library (-lbz2). */
+#undef HAVE_LIBBZ2
+
+/* Define this symbol for libcurl package. */
+#undef HAVE_LIBCURL
+
+/* Define this symbol for gnutls package. */
+#undef HAVE_LIBGNUTLS
+
+/* Define this symbol for gstreamer-1.0 package. */
+#undef HAVE_LIBGSTREAMER_1_0
+
+/* Define this symbol for mbedtls package. */
+#undef HAVE_LIBMBEDTLS
+
+/* Define to compile with libsdl included. */
+#undef HAVE_LIBSDL
+
+/* Define this symbol for openssl package. */
+#undef HAVE_LIBSSL
+
+/* Define this symbol for libtls package. */
+#undef HAVE_LIBTLS
+
+/* Define this symbol for wrap package. */
+#undef HAVE_LIBWRAP
+
+/* Define to 1 if you have the `xcb' library (-lxcb). */
+#undef HAVE_LIBXCB
+
+/* Define this symbol for zlib package. */
+#undef HAVE_LIBZ
+
+/* Define to 1 if you have the <limits.h> header file. */
+#undef HAVE_LIMITS_H
+
+/* Define to 1 if your system has a GNU libc compatible `malloc' function, and
+   to 0 otherwise. */
+#undef HAVE_MALLOC
+
+/* Define to 1 if you have the <math.h> header file. */
+#undef HAVE_MATH_H
+
+/* Define to 1 if you have the <mbedtls/ctr_drbg.h> header file. */
+#undef HAVE_MBEDTLS_CTR_DRBG_H
+
+/* Define to 1 if you have the <mbedtls/debug.h> header file. */
+#undef HAVE_MBEDTLS_DEBUG_H
+
+/* Define to 1 if you have the <mbedtls/entropy.h> header file. */
+#undef HAVE_MBEDTLS_ENTROPY_H
+
+/* Define to 1 if you have the <mbedtls/error.h> header file. */
+#undef HAVE_MBEDTLS_ERROR_H
+
+/* Define to 1 if you have the <mbedtls/net.h> header file. */
+#undef HAVE_MBEDTLS_NET_H
+
+/* Define to 1 if you have the <mbedtls/pem.h> header file. */
+#undef HAVE_MBEDTLS_PEM_H
+
+/* Define to 1 if you have the <mbedtls/pk.h> header file. */
+#undef HAVE_MBEDTLS_PK_H
+
+/* Define to 1 if you have the <mbedtls/ssl.h> header file. */
+#undef HAVE_MBEDTLS_SSL_H
+
+/* Define to 1 if you have the `memmove' function. */
+#undef HAVE_MEMMOVE
+
+/* Define to 1 if you have the `memset' function. */
+#undef HAVE_MEMSET
+
+/* Define this symbol if you have MSG_NOSIGNAL */
+#undef HAVE_MSG_NOSIGNAL
+
+/* Define this symbol if you have NCURSES support */
+#undef HAVE_NCURSES
+
+/* Define to 1 if you have the <netinet/in.h> header file. */
+#undef HAVE_NETINET_IN_H
+
+/* define if the compiler supports basic C++14 syntax */
+#undef HAVE_OBJCXX14
+
+/* Define to 1 if you have the <openssl/err.h> header file. */
+#undef HAVE_OPENSSL_ERR_H
+
+/* Define to 1 if you have the <openssl/ssl.h> header file. */
+#undef HAVE_OPENSSL_SSL_H
+
+/* Define to compile with Pandora included. */
+#undef HAVE_PANDORA
+
+/* Define to 1 if you have the <pwd.h> header file. */
+#undef HAVE_PWD_H
+
+/* Define to 1 if your system has a GNU libc compatible `realloc' function,
+   and to 0 otherwise. */
+#undef HAVE_REALLOC
+
+/* Define to 1 if you have the `realpath' function. */
+#undef HAVE_REALPATH
+
+/* Define to 1 if you have the `SDL_GetVersion' function. */
+#undef HAVE_SDL_GETVERSION
+
+/* Define to 1 if you have the <SDL/SDL_audio.h> header file. */
+#undef HAVE_SDL_SDL_AUDIO_H
+
+/* Define to 1 if you have the <SDL/SDL.h> header file. */
+#undef HAVE_SDL_SDL_H
+
+/* Define to 1 if you have the <SDL/SDL_version.h> header file. */
+#undef HAVE_SDL_SDL_VERSION_H
+
+/* Define this symbol for SecureTransport (OS X) */
+#undef HAVE_SECURETRANSPORT
+
+/* Define to 1 if you have the `select' function. */
+#undef HAVE_SELECT
+
+/* Define to 1 if you have the <signal.h> header file. */
+#undef HAVE_SIGNAL_H
+
+/* Define to 1 if you have the `socket' function. */
+#undef HAVE_SOCKET
+
+/* Define this symbol if you have SO_NOSIGPIPE */
+#undef HAVE_SO_NOSIGPIPE
+
+/* Define to 1 if you have the `srandomdev' function. */
+#undef HAVE_SRANDOMDEV
+
+/* Define to 1 if you have the `SSLv23_server_method' function. */
+#undef HAVE_SSLV23_SERVER_METHOD
+
+/* Define to 1 if you have the `SSLv3_server_method' function. */
+#undef HAVE_SSLV3_SERVER_METHOD
+
+/* Define to 1 if you have the <stdarg.h> header file. */
+#undef HAVE_STDARG_H
+
+/* Define to 1 if stdbool.h conforms to C99. */
+#undef HAVE_STDBOOL_H
+
+/* Define to 1 if you have the <stdint.h> header file. */
+#undef HAVE_STDINT_H
+
+/* Define to 1 if you have the <stdio.h> header file. */
+#undef HAVE_STDIO_H
+
+/* Define to 1 if you have the <stdlib.h> header file. */
+#undef HAVE_STDLIB_H
+
+/* Define to 1 if you have the `strcasecmp' function. */
+#undef HAVE_STRCASECMP
+
+/* Define to 1 if you have the `strchr' function. */
+#undef HAVE_STRCHR
+
+/* Define to 1 if you have the `strdup' function. */
+#undef HAVE_STRDUP
+
+/* Define to 1 if you have the `strerror' function. */
+#undef HAVE_STRERROR
+
+/* Define to 1 if you have the <strings.h> header file. */
+#undef HAVE_STRINGS_H
+
+/* Define to 1 if you have the <string.h> header file. */
+#undef HAVE_STRING_H
+
+/* Define to 1 if you have the `strncasecmp' function. */
+#undef HAVE_STRNCASECMP
+
+/* Define to 1 if you have the `strrchr' function. */
+#undef HAVE_STRRCHR
+
+/* Define to 1 if you have the `strtol' function. */
+#undef HAVE_STRTOL
+
+/* Define to 1 if you have the `strtoll' function. */
+#undef HAVE_STRTOLL
+
+/* Define to 1 if you have the `strtoul' function. */
+#undef HAVE_STRTOUL
+
+/* Define to 1 if you have the <sys/resource.h> header file. */
+#undef HAVE_SYS_RESOURCE_H
+
+/* Define to 1 if you have the <sys/socket.h> header file. */
+#undef HAVE_SYS_SOCKET_H
+
+/* Define to 1 if you have the <sys/stat.h> header file. */
+#undef HAVE_SYS_STAT_H
+
+/* Define to 1 if you have the <sys/types.h> header file. */
+#undef HAVE_SYS_TYPES_H
+
+/* Define to compile with taglib included. */
+#undef HAVE_TAGLIB
+
+/* Define to 1 if you have the <tcpd.h> header file. */
+#undef HAVE_TCPD_H
+
+/* Define to 1 if you have the <time.h> header file. */
+#undef HAVE_TIME_H
+
+/* Define to 1 if you have the `TLSv1_1_server_method' function. */
+#undef HAVE_TLSV1_1_SERVER_METHOD
+
+/* Define to 1 if you have the `TLSv1_2_server_method' function. */
+#undef HAVE_TLSV1_2_SERVER_METHOD
+
+/* Define to 1 if you have the `TLSv1_server_method' function. */
+#undef HAVE_TLSV1_SERVER_METHOD
+
+/* Define to 1 if you have the <tls.h> header file. */
+#undef HAVE_TLS_H
+
+/* Define to 1 if you have the `TLS_server_method' function. */
+#undef HAVE_TLS_SERVER_METHOD
+
+/* Define to compile with tonegenerator included. */
+#undef HAVE_TONEGENERATOR
+
+/* Define to 1 if you have the <unistd.h> header file. */
+#undef HAVE_UNISTD_H
+
+/* Define to 1 if you have the <zlib.h> header file. */
+#undef HAVE_ZLIB_H
+
+/* Define to 1 if the system has the type `_Bool'. */
+#undef HAVE__BOOL
+
+/* Define to disable debugging assertions */
+#undef NDEBUG
+
+/* Name of package */
+#undef PACKAGE
+
+/* Define to the address where bug reports for this package should be sent. */
+#undef PACKAGE_BUGREPORT
+
+/* Define to the full name of this package. */
+#undef PACKAGE_NAME
+
+/* Define to the full name and version of this package. */
+#undef PACKAGE_STRING
+
+/* Define to the one symbol short name of this package. */
+#undef PACKAGE_TARNAME
+
+/* Define to the home page for this package. */
+#undef PACKAGE_URL
+
+/* Define to the version of this package. */
+#undef PACKAGE_VERSION
+
+/* Define if PAM authentication is applicable. */
+#undef PAM_AUTHENTICATION
+
+/* Define if system capable of shadowing system users. */
+#undef SHADOW_CAPABLE
+
+/* Define to 1 if all of the C90 standard headers exist (not just the ones
+   required in a freestanding environment). This macro is provided for
+   backward compatibility; new code need not use it. */
+#undef STDC_HEADERS
+
+/* Define if traditional password authentication applies */
+#undef TRADITIONAL_PASSWD
+
+/* Version number of package */
+#undef VERSION
+
+/* Define to enable access control via hosts_access(5) */
+#undef WITH_ACCESSCONTROL
+
+/* Define to enable avfoundation source */
+#undef WITH_AVFOUNDATION
+
+/* Define to enable ffmpeg source */
+#undef WITH_FFMPEG
+
+/* Define to enable filesystem source */
+#undef WITH_FILESYSTEM
+
+/* Define to enable gstreamer source */
+#undef WITH_GSTREAMER
+
+/* Define to enable libao audio output */
+#undef WITH_LIBAO
+
+/* Define to enable libavdevice audio output */
+#undef WITH_LIBAVDEVICE
+
+/* Define to enable libsdl audio output */
+#undef WITH_LIBSDL
+
+/* Define to enable Pandora */
+#undef WITH_PANDORA
+
+/* Define to use taglib for metadata */
+#undef WITH_TAGLIB
+
+/* Define to enable tone generator */
+#undef WITH_TONEGENERATOR
+
+/* Define for Solaris 2.5.1 so the uint32_t typedef from <sys/synch.h>,
+   <pthread.h>, or <semaphore.h> is not used. If the typedef were allowed, the
+   #define below would cause a syntax error. */
+#undef _UINT32_T
+
+/* Define for Solaris 2.5.1 so the uint8_t typedef from <sys/synch.h>,
+   <pthread.h>, or <semaphore.h> is not used. If the typedef were allowed, the
+   #define below would cause a syntax error. */
+#undef _UINT8_T
+
+/* Define to av_new_stream if using an older ffmpeg */
+#undef av_new_stream
+
+/* Define to `__inline__' or `__inline' if that's what the C compiler
+   calls it, or to nothing if 'inline' is not supported under any name.  */
+#ifndef __cplusplus
+#undef inline
+#endif
+
+/* Define to rpl_malloc if the replacement function should be used. */
+#undef malloc
+
+/* Define to rpl_realloc if the replacement function should be used. */
+#undef realloc
+
+/* Define to the equivalent of the C99 'restrict' keyword, or to
+   nothing if this is not supported.  Do not define if restrict is
+   supported only directly.  */
+#undef restrict
+/* Work around a bug in older versions of Sun C++, which did not
+   #define __restrict__ or support _Restrict or __restrict__
+   even though the corresponding Sun C compiler ended up with
+   "#define restrict _Restrict" or "#define restrict __restrict__"
+   in the previous line.  This workaround can be removed once
+   we assume Oracle Developer Studio 12.5 (2016) or later.  */
+#if defined __SUNPRO_CC && !defined __RESTRICT && !defined __restrict__
+# define _Restrict
+# define __restrict__
+#endif
+
+/* Define to `unsigned int' if <sys/types.h> does not define. */
+#undef size_t
+
+/* Define to `int' if <sys/types.h> does not define. */
+#undef ssize_t
+
+/* Define to the type of an unsigned integer type of width exactly 32 bits if
+   such a type exists and the standard includes do not define it. */
+#undef uint32_t
+
+/* Define to the type of an unsigned integer type of width exactly 8 bits if
+   such a type exists and the standard includes do not define it. */
+#undef uint8_t

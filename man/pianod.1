@@ -1,0 +1,224 @@
+.\"Modified from man(1) of FreeBSD, the NetBSD mdoc.template, and mdoc.samples.
+.\"See Also:
+.\"man mdoc.samples for a complete listing of options
+.\"man mdoc for the short list of editing options
+.\"/usr/share/misc/mdoc.template
+.Dd 2013-04-21               \" DATE 
+.Dt pianod 1      \" Program name and manual section number 
+.Os UNIX/Linux/Darwin
+.Sh NAME                 \" Section Header - required - don't modify 
+.Nm pianod
+.\" The following lines are read in generating the apropos(man -k) database. Use only key
+.\" words here as the database is built based on the words here and in the .ND line. 
+.\" .Nm Other_name_for_same_program(),
+.\" .Nm Yet another name for the same program.
+.\" Use .Nm macro to designate other names for the documented program.
+.Nd Multisource music daemon.
+.Sh SYNOPSIS             \" Section Header - required - don't modify
+.Nm
+.\" .Op Fl abcd          \" [-abcd]
+.Op Fl v
+.Op Fl S
+.Op Fl p Ar port         \" [-p port] 
+.Op Fl P Ar httpport     \" [-P httpport] 
+.Op Fl s Ar httpsport    \" [-P httpport] 
+.Op Fl c Ar clientdir    \" [-c clientdir]
+.Op Fl d Ar directory    \" [-d directory]
+.Op Fl n Ar nobodyuser   \" [-n nobody]
+.Op Fl g Ar groups
+.\" .Op Ar                   \" [file ...]
+.\" .Ar arg0                 \" Underlined argument - use .Ar anywhere to underline
+.\" arg2 ...                 \" Arguments
+.Sh DESCRIPTION          \" Section Header - required - don't modify
+.Nm
+is a daemon that plays music from multiple online services and local
+media.
+.Nm
+provides a TCP/IP line-oriented socket interface and a Websockets
+interface, each allowing multiple clients to connect for status and
+control.  The application protocols (command/response sets) are identical
+between line-oriented and Websocket connections.
+.Pp
+The line-oriented protocol is accessible via TCP with
+.Xr nc 1
+or 
+.Xr telnet 1 ;
+to port 4445.
+The included web-based client may be accessed by
+browsing the HTTP port (for example, http://localhost:4446).
+Line sessions may also be initiated on the HTTP or HTTPS
+ports via the greeting "HELO pianod".
+.Pp
+The JSON protocol can be selected by initiating the WebSocket
+connection with the query parameter "protocol=json",
+or over TCP by connecting to the
+HTTP or HTTPS ports and greeting "HELO pianod json".
+.\" Use the .Nm macro to refer to your program throughout the man page like such:
+.\" .Nm
+.\" Underlining is accomplished with the .Ar macro like this:
+.\" .Ar underlined text .
+.\" .Pp                      \" Inserts a space
+.\" A list of items with descriptions:
+.\" .Bl -tag -width "text"   \" Begins a tagged list 
+.\" .It item a               \" Each item preceded by .It macro
+.\" Description of item a
+.\" .It item b
+.\" Description of item b
+.\" .El                      \" Ends the list
+.\" .Pp
+.Sh OPTIONS
+.Bl -tag -width "this much"  \" Differs from above in tag removed 
+.It Fl v
+Report version and build information, then exit.
+Flagged once, supplies only pianod version;
+twice, pianod configuration and library versions;
+thrice, details about library configurations.
+.It Fl S
+Shadow system users.  Accounts are created on-demand by
+authenticating with their system username and password, if 
+they are assigned a valid shell.
+Shadow accounts are purged during launch when the corresponding
+system account has been removed.
+.Pp
+If this option is subsequently
+disabled, already-created shadow accounts are left intact.
+If rebuilt with support for shadowing removed, accounts are
+not purged but will require new passwords (unless
+the user previously assigned an application password of their
+own volition).
+.It Fl p Ar port                 \"-a flag as a list item
+The line port, default 4445.
+When set to 0, the line-oriented port is disabled.
+.It Fl P Ar port                 \"-a flag as a list item
+The HTTP port, default 4446 or
+.Fl Ar p port
++ 1.  When set to 0, the
+HTTP server and Websockets are disabled.
+.It Fl s Ar port
+The HTTPS port, default 4447,
+.Fl Ar p port
++ 2, or
+.Fl Ar P port
++ 1.  When set to 0, or when the required X509 certificate and keys are not
+present, the HTTPS server and secure websockets are disabled.
+.It Fl c Ar clientdir
+Location of files to be served via HTTP(S).  The server only serves files (no
+server-side processing); this is intended to serve a web applet that will then
+communicate using Websockets.
+.It Fl d Ar directory
+Sets the location for pianod configuration and data files.
+.It Fl n Ar nobodyuser
+When invoked as root, the user to change to after startup.
+.Nm
+assumes both the user and group id of the specified user.
+Defaults to nobody.
+.It Fl g Ar groups
+When invoked as root, a comma-separated list of 
+supplementary groups to assume after startup.
+Defaults to the supplementary groups of the nobodyuser (see -n).
+.El                      \" Ends the list
+.Pp
+.Sh ENVIRONMENT      \" May not be needed
+.Bl -tag -width "XDG_CONFIG_HOME" \" ENV_VAR_1 is width of the string ENV_VAR_1
+.It Ev XDG_CONFIG_HOME
+Sets the location of configuration files.  Files are stored in a
+.Nm
+directory within this.
+.It Ev HOME
+If
+.Ev XDG_CONFIG_HOME
+is not set, and
+.Nm
+is not running as root, then files are stored in
+.Pa $HOME/.config/pianod.  
+.El                      
+.Sh FILES                \" File used or created by the topic of the man page
+Configuration file location is set by
+.Ev XDG_CONFIG_HOME or
+.Ev HOME (see environment, above).
+If run as root,
+.Nm
+honors
+.Ev XDG_CONFIG_HOME, but skips
+.Ev HOME and uses SYSCONFDIR,
+which is set at compile time and is often
+.Pa /etc
+but varies by platform;
+MacPorts, for example, uses
+.Pa /opt/local/etc .
+.Pp
+Whichever location is used,
+.Nm
+stores the following configuration files in a
+.Nm
+subdirectory thereof:
+.Pp
+.Bl -tag -width "x509-server-key.pem" -compact
+.It Pa startscript
+Commands executed with administrator privilege when
+.Nm
+is launched.
+.It Pa passwd.xml(.gz)
+This XML file contains a list of
+pianod users, their passwords (encrypted), privileges and preferences.
+.It Pa x509-server.pem
+The X509 certificate used for HTTPS encryption.
+.It Pa x509-server-key.pem
+The X509 key used for HTTPS encryption
+.It Pa source-name.xml(.gz)
+Music source data files.  Not all sources persist to data files.  Some
+may use compression to reduce data storage; in this case, .gz will be appended.
+.It Pa $(datadir)/share/pianod/html
+Default location of web client files.  datadir defaults to
+.Pa /usr/local
+for tarball installs, or
+.Pa opt/local
+for MacPorts, but may vary
+depending on options set by configure script.  Package managers
+that risk this being wrong should include
+.Ar -c clientdir
+in launch configuration files to set correct location.
+.It /etc/shells
+Read to determine if a user has a valid shell account.
+.El                      \" Ends the list
+.Sh DIAGNOSTICS       \" May not be needed
+.\" .Bl -diag -tag
+.\" .El
+To enable logging, use the
+.Fl Z
+and
+.Fl z
+flags:
+.Bl -tag -width "this much" \" Differs from above in tag removed 
+.It Fl Z Ar value
+Enables pianod logging for events indicated by
+.Ar value .
+Logs are sent to standard
+error, which may be redirected in usual manners. 0xfefd is a good value; see
+the code for specific flags.
+.It Fl z Ar value
+Like
+.Fl Z
+but for Football events such as connects, disconnects, socket states
+and HTTP requests.
+.El
+.Pp
+Logging preferences may also be changed at run-time via the SET [FOOTBALL]
+LOGGING FLAGS command.
+.Sh AUTHOR
+.Nm
+was developed by Perette Barella <perette@deviousfish.com> and incorporates
+components from Lars-Dominik Braun and others.  See the COPYING file for
+full information.
+.Sh COPYRIGHT
+.Nm
+is Copyright the various authors and
+is available under the MIT license; see the COPYING file for full text.
+.Sh SEE ALSO 
+.\" List links in ascending order by section, alphabetically within a section.
+.\" Please do not reference files that do not exist without filing a bug report
+.Xr piano 1 , 
+.Xr runmix 1 ,
+.Xr shells 5
+.\" .Sh BUGS              \" Document known, unremedied bugs 
+.\" .Sh HISTORY           \" Document history if command behaves in a unique manner

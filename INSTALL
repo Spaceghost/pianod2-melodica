@@ -1,0 +1,353 @@
+Building & Installing pianod
+============================
+
+You will need a C++14 or better compiler; in 2026, these are ubiquitous:
+Clang 4[^1] or later, gcc 5[^2] or later.
+
+[^1]: See [C++ Support in Clang](https://clang.llvm.org/cxx_status.html).
+Clang 8 has been tested; I have no empirical data on earlier versions.
+[^2]: See [C++ Standards Support in GCC](https://gcc.gnu.org/projects/cxx-status.html).
+GCC 6 has been tested; I have no empiricial data on earlier versions.
+
+Dependencies
+------------
+- [libffmpeg] (v3.1+), [gstreamer] or AVFoundation (macOS/OS X 10.7+)
+- [cURL] (Optional, for Pandora; must have TLS support (see below))
+- [gnutls], [mbed TLS], [LibreSSL], macOS/SecureTransport, or [OpenSSL]
+  (for secure pianod connections and to support TLS in cURL)
+- [taglib] (Recommended for filesystem/local file source with ffmpeg; C++)
+- [libao] (Optional audio output library that permits crossfading.)
+- [zlib] (Optional, for compressing data files) [gzstream] is included.
+- [libwrap] TCP wrappers (optional) regulate connections (/etc/hosts.allow
+  and /etc/hosts.deny); see hosts_access(5).
+- UTF-8 console/locale for best results
+
+**libav is not supported.**  If you lean that direction,
+[use ffmpeg.](https://wiki.debian.org/Debate/libav-provider/ffmpeg)
+
+All dependencies can be downloaded and set up manually, but most systems have
+package managers that streamline this process.  On macOS/OS X, see MacPorts; on
+Ubuntu or Debian, see apt-get; Gentoo, emerge; Fedora and RedHat, RPM; FreeBSD,
+try pkg or pkg_add.  For other Linux distributions, check [Wikipedia's list] to
+determine the packaging system used.
+
+[Wikipedia's list]: http://en.wikipedia.org/wiki/List_of_Linux_distributions
+
+Feature                 | libao | libsdl | avdevices | AVFoundation | gstreamer |
+ ---------------------- | ----- | ------ | --------- | ------------ | --------- |
+Crossfading             | Yes   | No     | Yes       | Yes          | Yes       |
+Pandora                 | Yes   | Yes    | Yes       | Yes          | Yes       |
+Filesystem              | Yes   | Yes    | Yes       | Yes          | Yes       |
+Tone generator          | Yes   | Yes    | Yes       | No           | Yes       |
+[Features supported by output devices]
+
+Package                 | Pandora  | Filesystem  | Tonegen  |
+ ---------------------- | -------- | ----------- | -------- |
+cURL w/ TLS support     | Required | No          | No       |
+taglib                  | No       | Optional†   | No       |
+gzstream                | No       | Optional    | Optional |
+[Source dependencies]
+
+† Provides better results than ffmpeg and gstreamer metadata readers;
+does not improve on AVFoundation.  AVFoundation is found on macOS 10.7+.
+
+Building
+--------
+If you have all of the dependencies listed above, use:
+
+	./configure && make
+
+If you'd like to use the unit test to verify it works:
+
+	make check
+
+You can run the software directly from the source directory now:
+ 
+	./src/pianod -c "$PWD/html"
+
+To install it issue:
+	
+	sudo make install
+
+On startup, pianod reads your `~/.config/pianod2/startscript`.  A sample
+is found in the `contrib` directory.
+
+### Automatic Build Configuration
+
+If you let `configure` make the choices, you will get the best supported set
+of features with the least redundancy:
+
+* Communication: Line and HTTP ports, and HTTPS support is available.
+* Media engine: gstreamer, ifnotfound ffmpeg, ifnotfound AVFoundation.
+* Audio output: One audio output scheme.
+	* For ffmpeg: libavdevices and libao, ifnotfound libsdl.
+	* For AVFoundation, whatever it provides.
+* All sources, subject to dependencies.  For AVFoundation, only filesystem is supported.
+* File compression will be used, if available.
+* Access control will be used, if available.
+
+### Manual Build Configuration
+
+Configuring the build has some options:
+
+`--disable-sanity` (default is `--enable-sanity`)
+: When enabled, configure expects a media engine and at least one output or
+  it fails with an error.  Disabling sanity reduces this to a warning.
+
+`--enable-debug` (default is `--disable-debug`)
+: When enabled, turns on assertions (self-checks in the software), some
+  additional logging and debug compile (-g).  These enlarge and slow the code
+  down slightly, but make debugging much, much easier.
+
+`--enable-shadow[=option]` or `--disable-shadow`
+: When enabled (and it also needs to be enabled with a command-line switch),
+pianod will allow login with system usernames and passwords, creating pianod
+accounts on-demand when necessary.  `option` may be `pam` or `passwd` to force
+a validation method.
+
+`--with-compression` or `--without-compression`
+: When included, pianod stores persisted data in compressed form.  If omitted,
+  compression is used if required libraries are available at configuration time.
+
+`--with-accesscontrol` or `--without-accesscontrol`
+: When included, new connections are validated with `hosts.deny` and `hosts.allow`.  See `hosts_access(5)`.  If omitted, access control is used if support is available at configuration time.
+
+`--with-engine=package`
+: Chooses a media engine package.  Packages may be: `gstreamer`,
+  `avfoundation` (macOS/OS X), or `ffmpeg`.
+
+`--with-tls[=package]` or `--without-tls`
+: Forces inclusion or exclusion of TLS support, or chooses a specific
+  TLS package to use.  Packages may be: `gnutls`, `libressl`, `mbedtls`, `openssl`, 
+  or `securetransport`.
+
+`--with-taglib` or `--without-taglib`
+: Forces inclusion or exclusion taglib for reading ID3 data for the filesystem
+  source.  If omitted, taglib is included if the ffmpeg media engine is
+  in use and the library is available at configuration time.
+
+`--with-pandora` or `--without-pandora`
+: Forces inclusion or exclusion of Pandora.  If omitted, Pandora is included
+  if its dependencies are available.
+
+`--with-tonegenerator` or `--without-tonegenerator`
+: Forces inclusion or exclusion of the tone generator.  The tone generator
+  has a 1KHz and 440Hz tones which could be used for setting levels, and
+  is helpful for troubleshooting and testing, but generally it's not needed.
+  If omitted, the tone generator is included if either libao or libsdl outputs
+  are available.  It is not compatible with AVFoundation for output.
+
+`--with-filesystem` or `--without-filesystem`
+: Forces inclusion or exclusion of the filesystem source, which uses media
+  on a local disk or mounted network filesystem.
+
+`--with-libao` or `--without-libao`; `--with-libsdl` or `--without-libsdl`
+: Forces inclusion or exclusion of libao or libsdl, two different output
+  libraries.  Both work with all sources for ffmpeg, or for
+  the tone generator when using AVFoundation.  However, **libsdl does not
+  support crossfading**.  Automatic configuration chooses one; you may
+  choose more, or 0 if you disable sanity.
+
+`--with-libavdevices` or `--without-libavdevices`
+: The third output library.  With some older Linux/ffmpeg systems,
+  there is a good chance you may need to
+  `room reconfigure driver alsa id experimental`.
+  Test this with the console; after confirming it's what you need,
+  you can add it to your startscript.
+
+### macOS (formerly Mac OS X)
+
+You'll need to install Xcode developer tools found your installation DVD
+or downloaded from the App store or developer.apple.com.  Tools are free.
+Alternately, on newer macOS versions, open terminal and enter "cc".  A
+window will pop up allowing you to install the command-line tools, which
+are much smaller than all of Xcode.
+
+With clang (Apple's compiler) you will need to set the compiler standard
+for Objective C:
+
+	OBJCXXFLAGS=-std=c++14
+	./configure
+
+If ./configure fails because the compiler doesn’t support C++11, you will need
+to install a C++ compiler.  gcc 4.8.4 (or later) works, and is easily installed
+via [MacPorts].
+
+[MacPorts]: http://macports.org
+
+After installing the MacPorts base:
+
+	sudo port install gcc5
+	export CC=gcc-mp-5
+	export CXX=g++-mp-5
+	./configure
+
+`pianod2` is believed viable on macOS 10.7+ without any additional
+dependencies.  For Snow Leopard (OS X 10.6) or earlier, you will need audio
+support.  To install these dependencies:
+
+	sudo port -v install libao ffmpeg taglib
+
+To create pianod from a tarball, using MacPorts for dependencies, you will also
+need these environment variables before invoking `./configure`:
+
+	export CPPFLAGS=-I/opt/local/include
+	export LDFLAGS=-L/opt/local/lib
+
+The tarball build will install to `/usr/local/bin`.
+
+## Linux
+
+If launching as root, use ‘pianod -n pi’ to run pianod as the pi’s starter
+user.
+
+To open audio devices, a process usually needs to belong to the `audio` group:
+
+	usermod --append --groups audio _username_
+
+When launching as root (such as from init.d, systemd or /etc/rc.d files),
+specify the user to run as:
+
+	pianod -r _username_
+
+
+Build Troubleshooting
+---------------------
+Messages may vary slightly by system and compiler.
+
+### General Troubles
+
+#### Mixing C++ Compilers
+
+Linking between C++ code built with different compilers or standards can cause
+woes.  I encountered taglib corrupting the stack; build issues were confirmed
+via a simple test program (just read and get artist).  If you run into
+troubles, rebuild the C++ dependencies and pianod using the same compiler and
+standards mode.
+
+### Rare Mac Troubles
+
+`pianod` and all libraries must be built with the same architecture.
+If the dependency libraries are installed but mismatched, you may
+override the default with `export CFLAGS="-arch x86_64"` or
+`export CFLAGS="-arch i386"`.  
+
+### TLS Configuration
+
+To use transport layer encryption, you must provide certificate and key
+files.  The script `create-pianod-tls-cert` in the `contrib` directory
+will create the necessary files, the certificate issued by a bogus CA.
+The certificate is for the current hostname, or another host specified
+as the first parameter.
+
+Reporting Bugs
+--------------
+Report bugs to <perette@deviousfish.com>
+
+## Reporting a crash or hang
+Providing useful and accurate information will help track down issues
+and get them fixed.  If nobody reports things, they will stay broken;
+some bugs only show up on some operating systems or with certain
+hardware/software configurations.  (Although these are written for
+pianod2, providing the details outlined here will be helpful to
+most open-source developers.)
+
+First off, don't rush to report problems; instead, study it and collect
+details.  Vague and unclear reports may not get fixed.  So, can you
+reproduce it?  If so, what makes it happen?  Does doing it *always*
+make it happen, or is it intermittent?  Collect a stack dump if you can
+(see below).
+
+When you're ready, submit an e-mail to <perette@deviousfish.com> with:
+
+* Your notes on what causes it
+* A copy of config.log from the pianod build directory (created when you
+  run "./configure" before building pianod).
+* Alternately, pianod version (`pianod -v`) and build details, operating
+  system, output of `uname -a`, and kind of hardware you're working on
+* A diagnostic report or stack dump of the crash or hang
+
+If you're experiencing crashes, it would be helpful to capture a
+snapshot of what's going on.  Thankfully, there are tools to do this.
+
+### Capturing Diagnostics on a Mac
+On application crash, a Mac automatically captures and logs the details.
+Look in `~/Library/Logs/DiagnosticReports`; the files will be named
+pianod_year_mo_da_number_hostname.crash.  Attach them to your report.
+
+You can generate a diagnostic report for a stuck process with
+`kill -ABRT <pid>`
+
+If you can’t see the Library folder in your home folder, open Finder
+and `Go→Go to Folder` and type in/cut-and-paste the above folder name.
+Find the report in there and mail it in.
+
+### Building for debugging
+If you don’t know how to do this, you may skip this step—but if you
+compiled and installed your own software, then building a debug-friendly
+variant is straightforward and makes troubleshooting much easier.
+Please do it if you can.  pianod’s configure script has an
+--enable-debug option; simply `./configure --enable-debug` then `make`
+again, and `make install` if you want to install it.
+
+### Capturing a Stack Dump
+To capture a stack dump, use gdb, the GNU debugger.
+
+For a hang, attach to an existing process:
+
+	ps x | grep pianod
+	50942   ??  S      8:50.40 /usr/local/bin/pianod
+	gdb -p 50942
+
+For crashes, start pianod from gdb:
+
+	gdb /usr/local/bin/pianod _add your normal pianod options here_
+	run
+
+When pianod crashes, gdb will report this and give you a command prompt.
+(If you want to capture a hang this way, press control-C when pianod has hung.)
+
+Now, in the gdb console, do the following: (For more on gdb, see the
+[GDB Cheat sheet].)
+
+	info args
+	info locals
+	info variables
+	info threads
+	info signals
+	thread apply all where full
+
+Cut-and-paste from the gdb window to your bug report and mail it in.
+
+[GDB Cheat sheet]: http://darkdust.net/files/GDB%20Cheat%20Sheet.pdf
+
+[libao]: http://xiph.org/ao/
+[libsdl]: http://www.libsdl.org
+[libffmpeg]: http://www.ffmpeg.org
+[gstreamer]: https://gstreamer.freedesktop.org
+[cURL]: http://curl.haxx.se
+[gnutls]: http://www.gnutls.org
+[mbed TLS]: http://tls.mbed.org
+[LibreSSL]: https://www.libressl.org
+[OpenSSL]: http://openssl.org
+[taglib]: http://taglib.github.io
+[zlib]: http://www.zlib.net
+[gzstream]: http://deviousfish.com/pianod2/README_gzstream.html
+[libwrap]: http://ftp.porcupine.org/pub/security/index.html
+
+Security Implications
+---------------------
+As with all network server applications, `pianod` should be considered a security risk out of paranoia: there may be undiscovered bugs or exploits in pianod or any of the libraries on which it is built.  To minimize risk should it be compromised, `pianod` should be run as a unique, low- or non-privileged user account.
+
+### Passwords
+User passwords are stored using OS-provided, one-way encryption with salt.  They cannot be decrypted, although dictionary/brute-force attacks apply as they do to the underlying operating system.
+
+Music service passwords for "remembered" sources, however, are stored in the user data file using a custom symetric encryption algorithm using a per-user key, and are easily decrypted.  Users should use a unique password for any music password they register.
+
+For these reasons, limiting access to the user data file (by `chmod`ing the directory, or running pianod with a 077 umask) is recommended.
+
+### HTTP Server
+The HTTP server does not create files.  If a directory is requested, its `index.html` is provided (or a `404` occurs); directory contents are not listed.  Requests to higher-level directories (`http://myserver/../../../Documents/myprivatething.txt`) are rejected, preventing download of arbitrary data for simple cases.
+
+If `canonicalize_file_name` or `realpath` are available, served files are validated to ensure they are contained in the served directory after any symbolic links are resolved.  If neither function is available, a well-placed symbolic link (such as `myexploit -> /`) could open a security hole subsequently used to retrieve arbitrary data.
+

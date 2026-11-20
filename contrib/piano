@@ -1,0 +1,288 @@
+#!/bin/ksh
+######################################################################
+# Program:	piano
+# Purpose:	Issues a command to a pianod2 server, parses the
+#		response into a useful something.
+# Author:	Perette Barella
+# Copyright 2012-2020 Devious Fish.  All rights reserved.
+#---------------------------------------------------------------------
+
+arg0=$(basename $0)
+USAGE='cdvmrsh:p:U:P:'
+[[ $(getopts '[-][12:abc]' flag --abc; print -- 0$flag) == "012" ]] &&
+	NAMEOPTS="-a $arg0" &&
+	USAGE=$'
+[+NAME?piano - Command interface to \bpianod2\b(1)]
+[+DESCRIPTION?\b'$arg0$'\b issues commands and retrieves data from
+  \bpianod2\b(1), allowing shell scripts or interactive shell access
+  without having to go through \btelnet\b(1) or \bnc\b(1).  Options
+  allow formatting data in various ways, either convenient for reading
+  (interactive use) or in more raw forms (for further processing).]
+[+?If no command is given, retrieves the playback status (paused, playing,
+  stopped, etc).]
+[c:numeric?In output, include numeric status codes.]
+[d:no-field-names?Data only; in output, strip the field names.]
+[v:verbose?Verbose.  Output status text instead of just returning a
+   status code.  Applies to checking status or playlist.]
+[g:diagnostics?Report diagnostic information (3xx messages).]
+[m:multiple-records?Multiple record format.  Includes \bpianod2\b\'s
+   end-of-data message in the output.]
+[r:time-remaining?Report time remaining in current track.  Returned as
+   a number of seconds, suitable for passing to \bsleep\b(1).]
+[s:secure?Use a secure connection.]
+[h:host?The host on which \bpianod2\b is running.  Defaults to \alocalhost\a,
+   or \v$PIANOD_HOST\v if set.]:[hostname]
+[p:port?The port at which to connect to \bpianod2\b.  By default
+   connections are attempted at 4445.  \bpiano\b can connect to either
+   the text or HTTP port.]#[port]
+[U:user?The user to authenticate on the server.  Not all commands require
+   authentication; if neither this nor the corresponding environment
+   variable are indicated, then authentication is not performed.]:[user]
+[P:password?The password to authenticate with.]:[password]
+[+EXIT STATUS?The general-purpose codes are:]
+  {
+    [+0?Success]
+    [+1?Command or query error]
+    [+254?Script dependency error]
+    [+255?Server could not be reached, did not respond, or did something unexpected]
+  }
+[+?For playback status, the following change:]
+  {
+    [+0?The server is playing (including between tracks or stalled)]
+    [+1?The server is paused or stopped.]
+  }
+[+ENVIRONMENT]
+  {
+    [+PIANOD_HOST?The \bpianod2\b host to connect to.]
+    [+PIANOD_PORT?The port at which to connect to \bpianod2\b.]
+    [+PIANOD_USER?The username to authenticate with.]
+    [+PIANOD_PASSWORD?The password with which to authenticate.]
+  }
+[+BUGS]
+[+?JSON requests will fail when \vasUser\v, \vinRoom\v and \vwithSource\v
+  clauses are used with with the \v-u\v option or \vPIANOD_USER\v environment
+  variable set.]
+
+command
+
+[-author?Perette Barella <perette@deviousfish.com>]
+'
+
+######################################################################
+# Function:	output_response
+# Purpose:	Formats the output per -v, -d, and -c options
+# Returns:	Nothing
+#---------------------------------------------------------------------
+function output_response {
+	typeset status="$1" keyword="$2" value="$3"
+	$CODE && print -n "$status "
+	$DATAONLY || print -n "$keyword "
+	print -- "$value"
+}
+##### End of function output_response #####
+
+
+
+
+######################################################################
+# Function:	Various callback functions
+# Purpose:	Called when a response code is matched to do what is
+#		required with the value.
+#---------------------------------------------------------------------
+# Callback function that outputs nothing; return status is 0 if playing.
+# (Intertrack and stalled are considered playing, because they are trying.)
+function return_status {
+	typeset code="$1"
+	(( code == 1 || code == 3 || code == 5 ))
+	return $?
+}
+
+
+# Callback function that reports remaining time in current track
+function remaining_time {
+	typeset code="$1" message="$2" time="$3" min sec
+	(( code > 3 )) && return 1
+	typeset remain=$(print -- "$time" | cut -d' ' -f1 | cut -d/ -f3)
+	print -- "${remain#-}" | IFS=: read min sec
+	print $(( ${min#0} * 60 + ${sec#0} ))
+	return 0
+}
+
+
+######################################################################
+# Function:	dump_data
+# Purpose:	Dumps all remaining stream data.
+#---------------------------------------------------------------------
+
+function dump_data {
+	while read status keyword value
+	do
+		[[ "$status" != [0-9][0-9][0-9] ]] && return 0
+		[[ "$status" == @($IGNORE) ]] && continue
+		if (( status == 204 ))
+		then
+			$MULTIPLE && output_response "$status" "$keyword" "$value"
+			exit 0
+		fi
+		output_response "$status" "$keyword" "$value"
+	done
+	return 1
+}
+
+
+
+##### Start of main #####
+
+CODE=false
+DATAONLY=false
+VERBOSE=false
+DIAGNOSTICS=false
+MULTIPLE=false
+HOST="${PIANOD_HOST:-localhost}"
+PORT=""
+USER="${PIANOD_USER}"
+PASSWORD="${PIANOD_PASSWORD}"
+SECURE=false
+GETFIELD=""
+IGNORE="021|022|023|024|025|026|031|032|033|034|041"
+
+# Parse the command line arguments
+while getopts $NAMEOPTS "$USAGE" option
+do
+	case "$option" in
+		c)	CODE=true ;;
+		d)	DATAONLY=true ;;
+		v)	VERBOSE=true ;;
+		m)	MULTIPLE=true ;;
+		U)	USER="$OPTARG" ;;
+		P)	PASSWORD="$OPTARG" ;;
+		p)	PORT="$OPTARG" ;;
+		h)	HOST="$OPTARG" ;;
+		s)	SECURE=true ;;
+		r)	GETFIELD="001|002|003|005|006"
+			GETACTION=remaining_time ;;
+	esac
+done
+shift $((OPTIND - 1))
+
+# Find a transport mechanism
+SLEEP=0
+if $SECURE
+then
+	[[ -z "$PORT" ]] && PORT=${PIANOD_PORT:-4447}
+	if whence -p openssl >/dev/null
+	then
+		TRANSPORT="openssl s_client -quiet -connect '$HOST:$PORT'"
+		SLEEP=10
+	fi
+else
+	[[ -z "$PORT" ]] && PORT=${PIANOD_PORT:-4445}
+	if whence -p netcat >/dev/null
+	then
+		TRANSPORT="netcat '$HOST' $PORT"
+	elif whence -p nc >/dev/null
+	then
+		TRANSPORT="nc '$HOST' $PORT"
+	elif whence -p telnet >/dev/null
+	then
+		TRANSPORT="telnet '$HOST' $PORT"
+	fi
+fi
+if [[ -z "$TRANSPORT" ]]
+then
+	print -- "$arg0: No transport found." 1>&2
+	exit 254
+fi
+
+# If there is one argument, it's either one term or a whole statement
+# that's been properly quoted already.
+# If there are multiple arguments, add quotes around each term since
+# the caller did not.
+command=""
+json=false
+if (( $# == 0 ))
+then
+	if [[ ! "$GETFIELD" ]]
+	then
+		# No command--get server status instead
+		GETFIELD="001|002|003|005|006"
+		GETACTION=return_status
+	fi
+elif [[ "${1:0:1}" == "{" ]]
+then
+	command="$@"
+	json=true
+elif (( $# == 1 ))
+then
+	command="$1"
+else
+	for term in "$@"
+	do
+		command="$command \"$term\""
+	done
+fi
+
+# First success is connect
+connecting=true
+asuser=""
+asusertail=""
+if [[ -n "$USER" ]]
+then
+	if $json
+	then
+		asuser="{'asUserExecute':{'username':'$USER','password':'$PASSWORD','request':"
+		asusertail="}}"
+	else
+		asuser="AS USER \"$USER\" \"$PASSWORD\" "
+		asusertail=""
+	fi
+fi
+set -o pipefail
+(print $"HELO pianod\n${asuser}${command}${asusertail}"; sleep $SLEEP) | eval "$TRANSPORT" | while read status keyword value
+do
+	set +o pipefail
+	[[ "$status" != [0-9][0-9][0-9] ]] && break
+	[[ "$status" == @($IGNORE) ]] && continue
+	if [[ "$GETFIELD" ]]
+	then
+		# Looking for a certain field.  If found, handle it.
+		if [[ $status == @($GETFIELD) ]]
+		then
+			$VERBOSE && output_response "$status" "$keyword" "$value"
+			eval "$GETACTION \"\$status\" \"\$keyword\" \"\$value\""
+			exit $?
+		fi
+	fi
+	if (( status == 200 )) && [[ $connecting == true ]]
+	then
+		connecting=false
+	elif (( status >= 200 && status < 300 ))
+	then
+		# Handle data response
+		if [[ $status == 203 ]]
+		then
+			dump_data
+			break
+		fi
+		[[ $VERBOSE == true || ($MULTIPLE == true && $status -eq 204) ]] &&
+			output_response "$status" "$keyword" "$value"
+		exit 0
+	elif (( status >= 300 && status < 400 ))
+	then
+		$DIAGNOSTICS && output_response "$status" "$keyword" "$value"
+	elif (( status >= 400 && status < 500 ))
+	then
+		$VERBOSE && output_response "$status" "$keyword" "$value"
+		exit 1
+	fi
+done
+if [[ $? != 0 ]]
+then
+	$VERBOSE && print "$arg0: Server communication error." 1>&2
+	exit 255
+fi
+$VERBOSE && print "$arg0: Protocol error." 1>&2
+return 255
+
+##### End of main #####
+

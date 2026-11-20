@@ -1,0 +1,776 @@
+#!/bin/ksh
+
+######################################################################
+# Program:	runmix
+# Purpose:	Schedules a mixplan to run
+# Arguments:	Filename
+# Author:	Perette Barella
+#---------------------------------------------------------------------
+
+
+
+
+######################################################################
+# Function:	usage
+# Purpose:	Displays the usage of this command.
+# Author:	Perette Barella
+#---------------------------------------------------------------------
+function usage
+{
+	print "Usage: $arg0 [-n] [-c] [-i] <filename>"
+	print "  -c : Clear the queue and stop the music"
+	print "  -n : Displays commands without executing"
+	print "  -i : Interactive mode"
+	print "  -L : Use late binding of playlist names"
+	print "  -w : Wait for startup"
+	exit 1
+}
+##### End of function usage #####
+
+
+
+
+######################################################################
+# Function:	parse_arguments
+# Purpose:	Parses the command line arguments
+# Arguments:	The command line arguments.
+# Returns:	Number of arguments parsed.
+# Author:	Perette Barella
+#---------------------------------------------------------------------
+function parse_arguments
+{
+	TRIAL=false
+	CLEAR=false
+	TESTMODE=false
+	WAIT=false
+	LATE=false
+	typeset option
+	while getopts 'wiI:LZcn?' option
+	do
+		case "$option" in
+			i)	INTERACTIVE=true ;;
+			I)	if [ "$OPTARG" != "mac" -a \
+				     "$OPTARG" != "stddialog" -a \
+				     "$OPTARG" != "console" ]
+				then
+					print "$arg0: Invalid interface."
+					exit 1
+				fi
+				INTERFACE="$OPTARG" ;;
+			L)	LATE=true ;;
+			c)	CLEAR=true ;;
+			n)	TRIAL=true ;;
+			w)	WAIT=true ;;
+			Z)	TESTMODE=true ;;
+			*)	usage ;;
+		esac
+	done
+	typeset status=0
+	return $((OPTIND - 1))
+}
+##### End of function parse_arguments #####
+
+
+
+
+
+
+
+######################################################################
+# Function:	time_to_minute
+# Purpose:	Calculates the time as a number, HHMM format.
+# Arguments:	Time.
+# Returns:	The time as a number.
+# Author:	Perette Barella
+#---------------------------------------------------------------------
+function time_to_minute
+{
+	typeset hour minute min
+	if expr "$1" : '[012]\{0,1\}[0-9]:[0-5][0-9]$' >/dev/null
+	then
+		print -- "$1" | IFS=: read hour min
+		# Make hour 2-digit so leading 0 can be stripped for 00:xx.
+		[ ${#hour} -eq 1 ] && hour="0$hour"
+		[ $hour -lt 0 -o $hour -gt 23 -o $min -lt 0 -o $min -gt 59 ] &&
+			return 1
+		let "minute = ${hour#0} * 100 + ${min#0}"
+		print -- $minute
+		return 0
+	fi
+	return 1
+}
+##### End of function time_to_minute #####
+
+
+
+
+
+
+######################################################################
+# Function:	validate_list
+# Purpose:	Validates the playlist list from the command line.
+# Arguments:	The list of playlists
+# Returns:	0 on ok, >0 on error found
+#		A piano command sequence is sent to standard out.
+# Author:	Perette Barella
+#---------------------------------------------------------------------
+function validate_list
+{
+	typeset time genres search playlistlist status=0 line=0 i user
+	typeset previous_time this_time first=true predicate
+
+	# Read stdin, stripping out comments
+	sed -E -e 's&//.*$&&' -e 's/#.*$//' | while read time genres
+	do
+		let line=line+1
+		[ "$time" = "" ] && continue
+		if [ "$time" = "configure" ]
+		then
+			if ! $first
+			then
+				print "line $line: configure must be precede mixplan." 1>&2
+				status=1
+			fi
+			
+			if ! piano "$genres"
+			then
+				print "$arg0: Unable to configure '$genres'." 1>&2
+				return 1
+			fi
+			continue
+		fi
+		first=false
+		if [ "$genres" = "stop" ]
+		then
+			print "$time stop"
+			continue
+		elif [ "$genres" = "start" ]
+		then
+			print "$time play mix"
+			continue
+		fi
+		# Make sure times always increment
+		if this_time=$(time_to_minute "$time")
+		then
+			if [ "$previous_time" = "" ]
+			then
+				previous_time="$this_time"
+			elif [ $previous_time -gt $this_time -a \
+			       \( $previous_time -lt 1200 -o \
+				  $this_time -gt 1200 \) ]
+			then
+				print "line $line: Time travel unsupported." 1>&2
+				status=1
+			else
+				previous_time="$this_time"
+			fi
+		else
+			print "line $line: Invalid time: $time" 1>&2
+			status=1
+		fi
+
+		# sed:
+		#	Strip whitespace off front & back
+		#	turn + operators & surrounding space to quoting pattern
+		predicate="$(print -- "$genres" |
+			  sed -E \
+				-e 's/[ 	]+/ /g' \
+				-e 's/^ //g' \
+				-e 's/ *$//g' \
+				-e 's/ ?\+ ?/" "/g')"
+		if $LATE
+		then
+			print -- "$time mix set like \"$predicate\""
+			continue
+		fi
+
+		# Validate that there are playlists for each alteration
+		typeset countstring="$(print "$genres" | sed 's/[^+]//g')"
+		typeset count=${#countstring}
+		let count=count+1
+		i=1
+		while [ $i -le $count ]
+		do
+			typeset pattern="$(print "$genres" | awk -F'+' "{print \$$i}")"
+			typeset matches=$(piano -mc playlist list like "$pattern" | grep -c '^111 ')
+			case "$matches" in
+				0) print "line $line: '$pattern' does not match any playlists." |
+				   sed -E 's/\(\.\* \)\?//g' 1>&2
+				   status=1 ;;
+				1) : ;;
+				*) print "line $line: $pattern matches multiple playlists." |
+				   sed -E 's/\(\.\* \)\?//g' 1>&2
+			esac
+			let i=i+1
+		done
+
+		# Since not late binding, form the command in a more
+		# straightforward manner using playlist IDs
+		playlistlist=$(piano -cd "playlist list like \"$predicate\"" | grep '^111 ')
+		if [ "$playlistlist" != "" ]
+		then
+			typeset names=$(piano -cd "playlist list like \"$predicate\"" | grep '^115 ')
+			print -- "# At $time, select: $(print -- $names | sed -e 's/^115 //' -e 's/ 115 /, /g')"
+			print -- "$time mix set id $(print -- $playlistlist | sed -e 's/^111 //' -e 's/ 111 / /g')"
+		fi
+	done
+	return $status
+}
+##### End of function validate_list #####
+
+
+
+
+
+######################################################################
+# Function:	execute_list
+# Purpose:	Schedule the playlist to execute using at(1)
+# Author:	Perette Barella
+#---------------------------------------------------------------------
+function execute_list
+{
+	typeset time command first="; piano 'play mix'" first_command="" comment
+	now=$(time_to_minute $(date '+%H:%M')) || status=1
+	while read time command
+	do
+		if [ "$time" = "now" ]
+		then
+			piano "$command"
+			[ "$first" != "" ] && piano "play mix"
+			first=""
+		elif [ "$time" = "#" ]
+		then
+			comment="$time $command"
+			continue
+		elif [ "$command" = "stop" ]
+		then
+			([ "$comment" != "" ] && print "$comment"; print "$AT_JOB_FLAG"; print piano stop) | at $time
+		else
+			cmd_time=$(time_to_minute "$time")
+			if [ $cmd_time -le $now ]
+			then
+				[ "$first_command" != "" ] &&
+					print -- "Already passed: $first_command" 1>&2
+				first_command="$command"
+			else
+				now=-1
+				if [ "$first_command" != "" ]
+				then
+					print -- "Running now: $first_command" 1>&2
+					piano "$first_command"
+					[ "$first" != "" ] && piano "play mix"
+					first_command=""
+					first=""
+				fi
+				([ "$comment" != "" ] && print "$comment"; print "$AT_JOB_FLAG"; print "piano '$command' $first") | at $time
+				first=""
+			fi
+		fi
+	done
+	return 0
+}
+##### End of function execute_list #####
+
+
+
+
+
+
+
+
+
+
+######################################################################
+# Function:	get_mix_at_jobs
+# Purpose:	Get a list of at(1) jobs related to running mixes.
+# Arguments:	None.
+# Returns:	0 on success, non-0 if there are no related at(1) jobs.
+# Author:	Perette Barella
+#---------------------------------------------------------------------
+function get_mix_at_jobs
+{
+	typeset job jobs found=1
+	jobs=$(atq | awk '{print $1}')
+	job=$(print -- $jobs | awk '{print $1}')
+
+	# Check for/handle the other version of Cron
+	if [ "$job" = "Date" ]
+	then
+		jobs=$(atq | tail +2 | awk '{print $8}')
+	fi
+	[ "$jobs" = "" ] && return 1
+	for job in $(atq | awk '{print $1}')
+	do
+		if at -c $job | grep -q "$AT_JOB_FLAG"
+		then
+			print $job
+			found=0
+		fi
+	done
+	return $found
+}
+##### End of function get_mix_at_jobs #####
+
+
+
+######################################################################
+# Function:	clear_at_queue
+# Purpose:	Removes all mix-related jobs in the atq.
+# Author:	Perette Barella
+#---------------------------------------------------------------------
+function clear_at_queue
+{
+	typeset jobs
+	if jobs=$(get_mix_at_jobs)
+	then
+		at -r $jobs
+	fi
+}
+##### End of function clear_at_queue #####
+
+
+
+
+######################################################################
+# Function:	folded
+# Purpose:	Display a message folded to the screen width.
+######################################################################
+function folded {
+	typeset junk
+	print "$*" | fold -s -${COLS} 1>&2
+}
+##### End of function folded #####
+
+
+
+######################################################################
+# Function:	run_info_dialog
+#   Related:	mac_info_dialog, stddialog_info_dialog, console_info_dialog
+# Purpose:	Displays an information dialog.
+# Arguments:	The text of the dialog.
+# Returns:	Nothing.
+# Author:	Perette Barella
+#---------------------------------------------------------------------
+# Mac: Use Applescript to run a native Mac dialog via Finder.
+function mac_info_dialog
+{
+	osascript << EOF 1>/dev/null 2>&1
+tell application "Finder"
+    activate
+    display dialog "$*" buttons { "Close" } with icon 2
+end tell
+EOF
+}
+
+# On Linux, use Whiptail which provides Curses-based console dialogs.
+function stddialog_info_dialog
+{
+	$DIALOG --title "$arg0 Information" --msgbox "$*" 0 0
+}
+
+# Do a console-based dialog.
+function console_info_dialog
+{
+	folded "$@"
+	print -n "Press return to continue: "
+	read 
+}
+
+
+# Dispatch to the right handler
+function run_info_dialog
+{
+	eval "${INTERFACE}_info_dialog" '"$@"'
+	return $?
+}
+##### End of function run_info_dialog #####
+
+
+
+
+
+
+
+######################################################################
+# Function:	run_choice_dialog
+#   Related:	mac_choice_dialog, stddialog_choice_dialog, console_choice_dialog
+# Purpose:	Present a choice dialog or choice using best available support.
+# Arguments:	$1 -- the message
+#		$2 -- number of default choice
+#		Additional -- the choices
+# Returns:	On success, 0 and chosen value goes to stdout.
+#		On error or cancellation, non-0.
+# WARNING:	Choices named "Cancel" may return non-0 instead of their string.
+# Author:	Perette Barella
+#---------------------------------------------------------------------
+function mac_choice_dialog
+{
+	typeset message="$1" default="$2" choices="\"$3\"" choice answer action
+	shift 3
+	for choice
+	do
+		choices="${choices}, \"${choice}\""
+	done
+	answer="$(osascript << EOF
+tell application "System Events"
+activate
+	return display dialog "$message" buttons { $choices } default button $default
+end tell
+EOF
+)"
+	print -- "$answer" | IFS=":" read action answer
+	if [ "$action" = "button returned" ]
+	then
+		print -- "$answer"
+		return 0
+	fi
+	return 1
+}
+
+function stddialog_choice_dialog {
+	typeset message="$1" default choice choices
+	eval default="\${$2}"
+	shift 2
+	for choice
+	do
+		choices="${choices} \"${choice}\" \"${choice}\" "
+	done
+	if eval "$DIALOG --title \"\$arg0 Please Choose\" --nocancel --notags --menu \"\$message\" 0 0 0 $choices 3>&1 1>&2 2>&3"
+	then
+		print
+		return 0
+	fi
+	return 1
+}
+
+function console_choice_dialog {
+	typeset message="$1"
+	shift 2
+	PS3="Please choose 1-$#: "
+
+	folded "$message"
+	select choice
+	do
+		[ "$choice" = "" ] && REPLY="" && continue
+		print "$choice"
+		return 0
+	done
+}
+
+# Dispatch to the right handler
+function run_choice_dialog
+{
+	eval "${INTERFACE}_choice_dialog" '"$@"'
+	return $?
+}
+##### End of function run_choice_dialog #####
+
+
+
+######################################################################
+# Function:	run_file_dialog
+#   Related:	mac_file_dialog, stddialog_file_dialog, console_file_dialog
+# Purpose:	Present a file dialog or choice using best available support.
+# Arguments:	[Optional] Prompt to display to user.
+# WARNING:	May change the current directory.
+# Returns:	0 on success, non-0 on error.
+# Author:	Perette Barella
+#---------------------------------------------------------------------
+function mac_file_dialog
+{
+	typeset message="$1" location="$2"
+	osascript << EOF 2>&1
+tell application "Finder"
+    set mixes to POSIX file "$location"
+    activate
+    set mixAlias to choose file with prompt "$message" of type {"mix", "txt"} default location mixes
+    set mixPath to POSIX path of mixAlias
+    return mixPath
+end tell
+EOF
+	return $?
+}
+
+function stddialog_file_dialog
+{
+	typeset message="$1" location="$2" choices file
+	cd "$location" || exit 1
+	# Show .mix and .txt files
+	for file in *.mix *.txt
+	do
+		[ -f "$file" ] && choices="${choices} \"$location/$file\" \"$file\" "
+	done
+	# Show directories
+	choices="${choices} \"$(dirname "$location")\" \".. (Parent directory)\""
+	for file in *
+	do
+		[ -d "$file" ] && choices="${choices} \"$location/$file\" \"$file\" "
+	done
+	if eval "$DIALOG --title \"\$location\" --notags --menu \"\$message\" 0 0 0 $choices 3>&1 1>&2 2>&3"
+	then
+		print
+		return 0
+	fi
+	return 1
+}
+
+function console_file_dialog
+{
+	typeset message="$1" location="$2" choices file
+	typeset parent=".. (Parent directory)" quit="Cancel"
+	cd "$location" || exit 1
+
+	# Show .mix and .txt files
+	for file in *.mix *.txt
+	do
+		[ -f "$file" ] && choices="${choices} \"$file\" "
+	done
+	# Show directories
+	choices="${choices} \"${parent}\" "
+	for file in *
+	do
+		[ -d "$file" ] && choices="${choices} \"$file\" "
+	done
+	choices="${choices} \"${quit}\" "
+
+	eval "set -- $choices"
+	PS3="Please choose 1-$#: "
+
+	print "Viewing files in: $location" 1>&2
+	folded "$message:"
+	select choice
+	do
+		[ "$choice" = "" ] && REPLY="" && continue
+		[ "$choice" = "$quit" ] && return 1
+		if [ "$choice" = "$parent" ]
+		then
+			dirname "$PWD"
+		else
+			print -- "$location/$choice"
+		fi
+		return 0
+	done
+	return 1
+}
+
+
+# Determine where the files are to be found.
+# While we're pointing at directories, dispatch to the right handler
+# to get a file or move to a different directory.
+function run_file_dialog
+{
+	typeset message="${1:-Please choose a file}"
+	typeset location="$HOME/Music/Mixes"
+	while [ "$location" != "/" -a ! -d "$location" ]
+	do
+		location="$(dirname "$location")"
+	done
+
+	# Rerun the file dialogs on different directories until we get a file
+	while [ ! -f "$location" ]
+	do
+		location=$(eval "${INTERFACE}_file_dialog" \"\$message\" \"\$location\") ||
+			return 1
+	done
+	print -- "$location"
+	return $1
+}
+##### End of function run_file_dialog #####
+
+
+
+######################################################################
+# Function:	interactive
+# Purpose:	Run an interactive session to check if a mix is already
+#		in motion, and/or select a mix plan.
+# Arguments:	None.
+# Returns:	0 on mix plan selected, with selection to stdout.
+#		non-0 if no plan is to be loaded.
+# Author:	Perette Barella
+#---------------------------------------------------------------------
+function interactive {
+	# If a mix is already running, ask what to do first.
+	typeset answer
+	if get_mix_at_jobs >/dev/null
+	then
+		answer=$(run_choice_dialog "There is a mix already in progress.  Cancel the existing mix?" 2 "Cancel current mix" "Choose new mix" "Nevermind") ||
+			return 1
+
+		if [ "$answer" = "Nevermind" ]
+		then
+			print "$arg0: No action taken." 1>&2
+			return 1
+		fi
+		if [ "$answer" = "Cancel current mix" ]
+		then
+			clear_at_queue
+			print "$arg0: Mix cleared." 1>&2
+			piano yell "Automix cancelled by ${USER} from $(uname -n)."
+			return 1
+		fi
+	fi
+	run_file_dialog "Please choose a mix to run"
+	return $?
+}
+##### End of function interactive #####
+
+
+
+
+##### Start of main #####
+
+arg0=$(basename $0)
+dir0=$(dirname $0)
+plan=/var/tmp/$arg0.$$.plan
+AT_JOB_FLAG="# PIANOD_RUNMIX_AT_JOB"
+
+INTERACTIVE=false
+INTERFACE=console
+
+# If shell initialization didn't happen, perform it.
+if [ "$PIANOD_USER" = "" ]
+then
+	[ -f "$HOME/.bashrc" ] && . "$HOME/.bashrc"
+	[ -f "$HOME/.kshrc" ] && . "$HOME/.kshrc"
+	[ -f "$HOME/.zshrc" ] && . "$HOME/.zshrc"
+fi
+
+# Get screen or window geometry
+COLS=$(tput cols) 2>/dev/null
+COLS=$((${COLS:-80} - 1))
+LINES=$(tput lines) 2>/dev/null
+LINES=$((${LINES:-24} - 1))
+
+DIALOG=dialog
+if [ "$(uname -s)" = "Darwin" ]
+then
+	INTERFACE=mac
+	# Check for invokation from Finder
+	if [ $# -eq 0 -a $(print -- "$arg0" | awk -F. '{ print $NF}') = "command" ]
+	then
+		INTERACTIVE=true
+	fi
+else
+	typeset dialog_tries="dialog whiptail zenity"
+	if whence xwininfo >/dev/null 2>&1 &&
+	   xwininfo -root >/dev/null 2>&1
+	then
+		dialog_tries="xdialog gdialog $dialog_tries"
+	fi
+
+	# Look for something that implements the standard dialogs.
+	# Here's hoping the command lines are as standard as alleged.
+	for DIALOG in $dialog_tries
+	do
+		if whence "$DIALOG" >/dev/null 2>&1
+		then
+			INTERFACE=stddialog
+			break
+		fi
+	done
+fi
+
+if ! whence at >/dev/null
+then
+	print "$arg0: Cannot find at(1) -- please install and/or adjust PATH."
+	exit 1
+fi
+
+parse_arguments "$@"
+shift $?
+
+if $CLEAR
+then
+	clear_at_queue
+	piano yell "Automix cancelled by ${USER} from $(uname -n)."
+	[ $# -gt 0 ] && usage
+	$INTERACTIVE || exit 0
+fi
+
+if $TESTMODE
+then
+	run_info_dialog "Four score and seven years ago our fathers brought forth on this continent a new nation, conceived in liberty, and dedicated to the proposition that all men are created equal.  Now we are engaged in a great civil war, testing whether that nation, or any nation so conceived and so dedicated, can long endure. We are met on a great battlefield of that war. We have come to dedicate a portion of that field, as a final resting place for those who here gave their lives that that nation might live. It is altogether fitting and proper that we should do this."
+	print "run_info_dialog returned: $?"
+	run_choice_dialog "Four score and seven years ago our fathers brought forth on this continent a new nation, conceived in liberty, and dedicated to the proposition that all men are created equal." 2 "Abort" "Retry" "Fail"
+	print "run_choice_dialog returned: $?"
+	run_file_dialog
+	print "run_file_dialog returned: $?"
+	exit 0
+fi
+
+
+# If there are no parameters, and this is OS X, and we were invoked as
+# <something>.command, then do an Applescript file dialog to set $1.
+if $INTERACTIVE || $WAIT
+then
+	retries=1
+	$WAIT && retries=20
+	ready=false
+
+	while [ "$ready" = "false" ]
+	do
+		if piano quit > /dev/null 2>&1
+		then
+			ready=true
+		else
+			let retries--
+			if [ $retries -le 0 ]
+			then
+				$INTERACTIVE &&
+					run_info_dialog 'Cannot connect to pianod.  Please check' \
+						'configuration and network.'
+				exit 1
+			fi
+			sleep 1
+		fi
+	done
+	file=$(interactive) || exit 1
+	set "$file"
+fi
+
+# There should be one argument left
+[ $# -ne 1 ] && usage
+
+if [ ! -f "$1" ]
+then
+	print "$1: File does not exist."
+	exit 1
+fi
+
+status=1
+retries=1
+$WAIT && retries=2
+
+while [ $retries -gt 0 -a $status -ne 0 ]
+do
+	let retries--;
+	if validate_list < "$1" > "$plan"
+	then
+		status=0
+		cat "$plan"
+		if [ "$TRIAL" = "false" ]
+		then
+			# Remove previous mixes
+			clear_at_queue
+			# Schedule new mix
+			if execute_list < "$plan"
+			then
+				piano yell "Automix $(basename "$1") invoked from $(uname -n)."
+				status=0
+			fi
+		fi
+	elif $INTERACTIVE && [ $retries -eq 0 ]
+	then
+		run_info_dialog 'Mix validation failed.  Check the' \
+			'console window for details.'
+	fi
+	if [ $status -ne 0 -a $retries -ge 1 ]
+	then
+		piano wait for source any pending ready timeout 90 && retries=2
+	fi
+done
+rm -f "$plan"
+exit $status
+
+##### End of main #####
+

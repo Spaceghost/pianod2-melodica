@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+<meta name="generator" content=
+"HTML Tidy for HTML5 for Linux version 5.9.8">
+<meta charset="UTF-8">
+<title>pianod Web-Fernsteuerung</title>
+<meta name="viewport" content="width=device-width">
+<meta name="application-name" content="pianod">
+<link href="client.css" rel="stylesheet" type="text/css">
+<link rel="shortcut icon" href="pianod-icon.gif">
+<link rel="apple-touch-icon-precomposed" href="pianod-button.gif">
+<script src=
+"//ajax.googleapis.com/ajax/libs/jquery/2.2.0/jquery.min.js"></script>
+<script src="translate.js"></script>
+<script src="ratings.js"></script>
+</head>
+<body>
+<noscript>
+<h1>pianod Web-Fernsteuerung</h1>
+Sorry, JavaScript ist erforderlich, um diese Seite zu nutzen.</noscript>
+<div id="switcher" style="display:none;"><span class=
+"trackcontrols"><a class="playpause privuser" onclick=
+"client.execute ('PAUSE TOGGLE');" title=
+"unterbrechen oder fortsetzen.">▶</a></span> <select id=
+"sourcepicker" onchange="client.sourceview.selectSource();">
+<option value="1">Medienmanager</option>
+</select> <a class="handle" onclick=
+"client.toggleMenu();">≣ Wählen Sie Ansicht</a>
+<div class="menu"><a onclick=
+"client.show ('source')">Quellen</a> <a onclick=
+"client.show ('track')">Spur</a> <a onclick=
+"client.show ('queue')">Queue</a> <a onclick=
+"client.show ('search')">Suche</a> <a onclick=
+"client.show ('playlist')">Playlists</a> <a onclick=
+"client.show ('seed')">Kinder</a> <a onclick=
+"client.show ('activity')">Aktivität</a> <a onclick=
+"client.show ('user')">Benutzer</a> <a onclick=
+"client.execute ('QUIT');">Urlaub</a></div>
+</div>
+<div id="diagnostics" class="popup">
+<div><a class="close button" onclick=
+"$('#diagnostics').hide();">✖</a> <span id="diagmain">&nbsp;</span>
+<div id="diagdetails">&nbsp;</div>
+</div>
+</div>
+<div id="views">
+<div id="loginview" style="display:none;">
+<h1>pianod Web-Fernsteuerung</h1>
+<p>Urheberrecht © 2011-2021 Devious Fish<br>
+Alle Rechte vorbehalten.<br>
+unter der MIT-Lizenz veröffentlicht.</p>
+<div id="serverinput"><label for=
+"server">Server</label> <input id="server" type="url"
+maxlength="80" required="required" value=
+"house.perette.barella.org:4446"> <input id="secureserver" type=
+"checkbox" onchange="client.loginview.toggleSecurity()">
+<label for="secureserver">Sichere Verbindung</label></div>
+<label for="username">Benutzername</label> <input id=
+"username" type="text" maxlength="20"> <label for=
+"password">Passwort</label> <input id="password" type=
+"password" maxlength="20"> <input id="storepassword" type=
+"checkbox"> <label for=
+"storepassword">Shop Passwort</label>
+<p><a id="loginbutton" class="button" onclick=
+"client.loginview.connect(false);">Anmelden</a>
+<a class="button" onclick=
+"client.loginview.connect(true);">Guest</a></p>
+<p><a href="console.html">Konsole</a> • <a href=
+"viewer.html">Projektor</a></p>
+<p class="note">Sichere Verbindungen erfordern TLS-Zertifikate und Schlüssel eingerichtet werden.</p>
+</div>
+<div id="sourceview" style="display:none;">
+<h2>Quellen</h2>
+<div class="accordion">
+<h3 class="privservice">Neuen Quelle</h3>
+<div id="addsourceparameters"><label for=
+"addsourcetype">Typ Quelle:</label> <select id=
+"addsourcetype" onchange="client.sourceview.selectAddFields();">
+<option value="">Typ auswählen ...</option>
+</select> <!-- Network media parameters -->
+ <label for="addsourceuser">Dienstbenutzernamen</label> <input id=
+"addsourceuser" type="text" placeholder=
+"Benutzername"> <label for=
+"addsourcepassword">Service-Passwort</label> <input id=
+"addsourcepassword" type="password" placeholder=
+"Passwort"> 
+<!-- Local media parameters -->
+ <label for="addsourcepath">Verzeichnis / Pfad / Ordner für die Medien</label> <input id=
+"addsourcepath" type="text" placeholder=
+"Drag Musik-Ordner hier"> <!-- Generic parameters -->
+<div><select id="addsourcepandoraplus">
+<option value="">Select account type...</option>
+<option value="automatic">Automatic</option>
+<option value="standard">Standard</option>
+<option value="plus">Pandora Plus</option>
+<option value="premium">Pandora Premium</option>
+</select></div>
+<div>
+<div><input id="addsourcechannelize" type="checkbox"> <label for=
+"addsourcechannelize">Include left &amp; right tones</label></div>
+<input id="addsourceratingbias_enable" type="checkbox" onchange=
+"client.sourceview.selectAddFields();"> <label for=
+"addsourceratingbias_enable">Rating bias level</label>
+<input id="addsourceratingbias" type="range" min="1" max="100"
+step="1" title="Steuern Sie, wie viel Bewertungen Liedanwählungen bewirken.  Am links keine; am Recht beeinflußt jeder Stern Auswahlwahrscheinlichkeit durch ungefähr 3x (nicht geschätzt Liede = 3 Sterne)."></div>
+<div><input id="addsourcerecentbias_enable" type="checkbox"
+onchange="client.sourceview.selectAddFields();"> <label for=
+"addsourcerecentbias_enable">Vor kurzem gespielte schräge Stufe</label>
+<input id="addsourcerecentbias" type="range" min="1" max="100"
+step="1" title="Control how much recent play effects song selections.  At left, none; at right, selection probability is biased roughly linear with time since last play."></div>
+<div><select id="addsourcecachesize">
+<option value="">Default cache size</option>
+<option value="800" title="Remember 800-1000 items">
+Tiny</option>
+<option value="2000" title="Remember 2,000-2,400 items">
+Small</option>
+<option value="4000" title="Remember 4,000-4,800 items">
+Medium</option>
+<option value="10000" title="Remember 10,000-12,000 items">
+Large</option>
+<option value="50000" title="Remember 50,000-60,000 items">
+Ludicrous</option>
+</select></div>
+<div><select id="addsourcerescan" onchange=
+"client.sourceview.selectAddFields();">
+<option value="">Rückstellungsrücklaufabstand</option>
+<option value="never" title="Lichten Sie nie für neue Media wiederab">
+Nie</option>
+<option value="once" title="Scan-Rücklauf für Media gerade dieses einmal">
+Sobald</option>
+<option value="always" title="Scan-Rücklauf, wann immer Quelle begonnen wird">
+Immer</option>
+<option value="periodically" title=
+"Scan-Rücklauf für die Media täglich">
+Regelmäßig</option>
+</select></div>
+<div><select id="addsourceaccess" onchange=
+"client.sourceview.selectAddFields();">
+<option value="">Rückstellungsteilen</option>
+<option value="disowned" title="kann von niemandem überprüft werden.">
+Unowned</option>
+<option value="private" title="Andere Benutzer können nicht die Quelle zu leihen">
+Privat</option>
+<option value="shared" title="Andere können zu leihen, aber nicht zu kopieren oder zu revidieren Quelle">
+Geteilt</option>
+<option value="published" title="Andere können zu leihen und zu kopieren, aber Quelle nicht überarbeiten">
+Veröffentlicht</option>
+<option value="public" title="Andere können zu leihen, zu kopieren und zu überarbeiten Quelle">
+Öffentlichen</option>
+</select></div>
+<div><select id="addsourcesongproxy" onchange=
+"client.sourceview.selectAddFields();">
+<option value="">Wählen Sie LiedSubstitutionsart aus...</option>
+<option value="none" title="Diese Quelle wird nicht in Mediaersatz miteinbezogen.">
+Kein Ersatz</option>
+<option value="donor" title="Aufnahmefähige Quellen können abgleichende Liede von dieser Quelle ersetzen.">
+Stellt Ersatz zur Verfügung</option>
+<option value="recipient" title=
+"Diese Quelle kann Media mit Abgleichungen von den Spenderquellen ersetzen.">
+Nimmt Ersatz an</option>
+</select></div>
+<div><select id="addsourcepersistence" onchange=
+"client.sourceview.selectAddFields();">
+<option value="">Erinnern Sie sich nicht an Quelle</option>
+<option value="remember" title=
+"Erinnern Sie sich und erlauben Sie an manuelle Wiederverwendung.">
+Erinnern Sie sich</option>
+<option value="restore" title="Erinnern Sie sich und stellen Sie automatisch auf Start zurück.">
+Wiederherstellung</option>
+</select></div>
+<div><label for="addsourcename">Namen für Quelle</label>
+<input id="addsourcename" type="text" placeholder=
+"Leer für Standard-"></div>
+<ul class="actions">
+<li><a class="button" onclick=
+"client.sourceview.addSource ();">Quelle hinzufügen</a></li>
+</ul>
+</div>
+<h3 id="borrowsource" class="privservice">Vorhandene Quelle</h3>
+<div id="borrowsourceparameters"><select id="borrowlist" onchange=
+"client.sourceview.selectBorrowFields();">
+<option>Quelle wählen zu aktivieren ...</option>
+</select>
+<div><select id="borrowsourcepandoraplus">
+<option value="">Select account type...</option>
+<option value="automatic">Automatic</option>
+<option value="standard">Standard</option>
+<option value="plus">Pandora Plus</option>
+<option value="premium">Pandora Premium</option>
+</select></div>
+<div>
+<div><input id="borrowsourcechannelize" type="checkbox">
+<label for="borrowsourcechannelize">Include left &amp; right tones</label></div>
+<input id="borrowsourceratingbias_enable" type="checkbox" onchange=
+"client.sourceview.selectBorrowFields();"> <label for=
+"borrowsourceratingbias_enable">Rating bias level</label>
+<input id="borrowsourceratingbias" type="range" min="1" max="100"
+step="1" title="Steuern Sie, wie viel Bewertungen Liedanwählungen bewirken.  Am links keine; am Recht beeinflußt jeder Stern Auswahlwahrscheinlichkeit durch ungefähr 3x (nicht geschätzt Liede = 3 Sterne)."></div>
+<div><input id="borrowsourcerecentbias_enable" type="checkbox"
+onchange="client.sourceview.selectBorrowFields();"> <label for=
+"borrowsourcerecentbias_enable">Vor kurzem gespielte schräge Stufe</label>
+<input id="borrowsourcerecentbias" type="range" min="1" max="100"
+step="1" title="Control how much recent play effects song selections.  At left, none; at right, selection probability is biased roughly linear with time since last play."></div>
+<div><select id="borrowsourcecachesize">
+<option value="">Retain current cache size</option>
+<option value="800" title="Remember 800-1000 items">
+Tiny</option>
+<option value="2000" title="Remember 2,000-2,400 items">
+Small</option>
+<option value="4000" title="Remember 4,000-4,800 items">
+Medium</option>
+<option value="10000" title="Remember 10,000-12,000 items">
+Large</option>
+<option value="50000" title="Remember 50,000-60,000 items">
+Ludicrous</option>
+</select></div>
+<div><select id="borrowsourcerescan" onchange=
+"client.sourceview.selectBorrowFields();">
+<option value="">Behalten Sie aktuellen Rücklaufabstand bei</option>
+<option value="never" title="Lichten Sie nie für neue Media wiederab">
+Nie</option>
+<option value="once" title="Scan-Rücklauf für Media gerade dieses einmal">
+Sobald</option>
+<option value="always" title="Scan-Rücklauf, wann immer Quelle begonnen wird">
+Immer</option>
+<option value="periodically" title=
+"Scan-Rücklauf für die Media täglich">
+Regelmäßig</option>
+</select></div>
+<div><select id="borrowsourceaccess" onchange=
+"client.sourceview.selectBorrowFields();">
+<option value="">Behalten Sie aktuelles teilendes Verhalten bei</option>
+<option value="disowned" title="kann von niemandem überprüft werden.">
+Unowned</option>
+<option value="private" title="Andere Benutzer können nicht die Quelle zu leihen">
+Privat</option>
+<option value="shared" title="Andere können zu leihen, aber nicht zu kopieren oder zu revidieren Quelle">
+Geteilt</option>
+<option value="published" title="Andere können zu leihen und zu kopieren, aber Quelle nicht überarbeiten">
+Veröffentlicht</option>
+<option value="public" title="Andere können zu leihen, zu kopieren und zu überarbeiten Quelle">
+Öffentlichen</option>
+</select></div>
+<div><select id="borrowsourcesongproxy" onchange=
+"client.sourceview.selectBorrowFields();">
+<option value="">Verwenden Sie aktuelle LiedSubstitutionsart</option>
+<option value="none" title="Diese Quelle wird nicht in Mediaersatz miteinbezogen.">
+Kein Ersatz</option>
+<option value="donor" title="Aufnahmefähige Quellen können abgleichende Liede von dieser Quelle ersetzen.">
+Stellt Ersatz zur Verfügung</option>
+<option value="recipient" title=
+"Diese Quelle kann Media mit Abgleichungen von den Spenderquellen ersetzen.">
+Nimmt Ersatz an</option>
+</select></div>
+<div><select id="borrowsourcepersistence" onchange=
+"client.sourceview.selectBorrowFields();">
+<option value="">Erinnern Sie sich an keine Änderungen</option>
+<option value="remember" title=
+"Erinnern Sie sich und erlauben Sie an manuelle Wiederverwendung.">
+Erinnern Sie sich</option>
+<option value="restore" title="Erinnern Sie sich und stellen Sie automatisch auf Start zurück.">
+Wiederherstellung</option>
+</select></div>
+<ul class="actions">
+<li><a class="button" onclick=
+"client.sourceview.borrowSource();">Verwenden Quelle</a></li>
+</ul>
+</div>
+<h3 id="forgetsource" class="privlistener">
+Forget source</h3>
+<div><select id="sourceforgetlist">
+<option>Quelle wählen zu aktivieren ...</option>
+</select>
+<ul class="actions">
+<li><a class="button" onclick=
+"client.sourceview.forgetSource();">Forget source</a></li>
+</ul>
+</div>
+<h3 class="privservice">Remove Quelle</h3>
+<div>
+<ul class="actions">
+<li><a class="button" onclick=
+"client.sourceview.removeSource();">Entfernen Stromquelle</a></li>
+</ul>
+</div>
+</div>
+</div>
+<div id="trackview" style="display:none;">
+<div id="trackviewtitle"><span class="trackcontrols"><a class=
+"playpause button privuser" onclick=
+"client.execute ('PAUSE TOGGLE');" title=
+"unterbrechen oder fortsetzen.">▶</a> <a class="button" onclick=
+"client.trackview.showActionPopup();" title=
+"Show more actions...">⚙</a></span> <a id="nowplaying"
+onclick="client.trackview.goToCurrentTrack();" class="button"
+title="Aktuell abgespielten song anzeigen.">Sie hören</a> <select id=
+"playlistname" onchange="client.trackview.selectPlaylist();">
+<option>Wählen Sie Titelliste aus...</option>
+<optgroup label="Sonderplaylists">
+<option value="stop">Stopp</option>
+<option value="request">Nur Anfragen</option>
+<option value="mix">Mix ausgewählten Wiedergabelisten</option>
+<option value="everything">Mix alles</option>
+<option value="auto">Autotune Wiedergabelisten</option>
+</optgroup>
+<optgroup id="playlists" label="Einzel Wiedergabelisten">
+<option>&nbsp;</option>
+</optgroup>
+</select></div>
+<div id="addplaylistfromtrack" class="popup">
+<div><a class="close button" onclick=
+"$('#addplaylistfromtrack').hide();">✖</a>
+<p>Samen hinzufügen Aus Song</p>
+<label for="addfromtracktarget">Wiedergabeliste:</label>
+<select id="addfromtracktarget" onchange=
+"client.trackview.selectAddTarget();">
+<option value="">Neue Wiedergabeliste zu erstellen</option>
+</select>
+<div id="addfromtracknewplaylist"><label for=
+"addfromtracksource">Neue Wiedergabeliste auf Quelle:</label>
+<select id="addfromtracksource">
+<option>&nbsp;</option>
+</select> <input id="addfromtrackplaylist" type="text" placeholder=
+"Neue Wiedergabeliste name"></div>
+<ul class="actions">
+<li><a id="doaddseedfromsong" class="button" onclick=
+"client.trackview.addFromTrack('song');">-</a></li>
+<li><a id="doaddseedfromalbum" class="button" onclick=
+"client.trackview.addFromTrack('album');">-</a></li>
+<li><a id="doaddseedfromartist" class="button" onclick=
+"client.trackview.addFromTrack('artist');">-</a></li>
+</ul>
+</div>
+</div>
+<div id="trackactions" class="popup">
+<div><a class="close button" onclick=
+"$('#trackactions').hide();">✖</a>
+<ul class="actions">
+<li><a id="skiprecuetrack" title="Den aktuellen Titel überspringen" class="button"
+onclick="client.trackview.skipOrRecue();">Zeilensprunglied</a></li>
+<li><a class="button privdeejay" title="Brechen Sie alle anstehenden Anforderungen."
+onclick=
+"client.trackview.clearQueue();">Klar Anfragen</a></li>
+</ul>
+<label for=
+"queuerandomize">Bilden Sie Auswahl nach dem Zufallsprinzip vorbei</label>
+<select id="queuerandomize" class="privuser" onchange=
+"client.trackview.selectQueueRandomize();">
+<option value="song" selected>Sortierte einzelne Liede</option>
+<option value="album">Wählen eines gesamten Albums</option>
+<option value="artist">Einige Liede durch einen einzelnen Künstler</option>
+<option value="playlist">Sortierte Liede von einer Titelliste</option>
+<option value="random">Eine nach dem Zufall ausgesuchte Methode</option>
+</select>
+<div id="roomselector"><label for=
+"rooms">Wählen Sie Raum::</label> <select id="rooms"
+onchange="client.trackview.selectRoom();">
+<option value="pianod" selected>Loading room list...</option>
+</select></div>
+<label for="crossfadeduration">Crossfade Dauer
+<span><span id=
+"crossfadeseconds">&nbsp;</span>&nbsp;Sekunden</span></label>
+<div class="rangewrap privuser"><input id="crossfadeduration"
+class="privuser" type="range" min="0" max="15" step="0.1" title=
+"Crossfade duration" onchange=
+"client.trackview.setCrossfadeDuration ();"></div>
+<label for="crossfadelevel">Crossfade Stufe <span><span id=
+"crossfadedecibels">testvalue&nbsp;</span>dB</span></label>
+<div class="rangewrap privuser"><input id="crossfadelevel" class=
+"privuser" type="range" min="0" max="50" step="0.1" title=
+"Crossfade level" onchange=
+"client.trackview.setCrossfadeLevel ();"></div>
+</div>
+</div>
+<div id="trackinfo">
+<div id="albumcover"><img src="no-art.jpeg" id="albumart" alt=''
+ondblclick="client.trackview.showArt ();"> <a id="why" class=
+"button privowner" onclick="client.trackview.explainSong ();"
+title="Erklären Sie, warum dieser Song gespielt wurde.">?</a>
+<div class="pager"><a id="previoustrack" onclick=
+"client.trackview.goToPreviousTrack();" class="button previous"
+title="Vorherige Spur Anzeigen">&nbsp;←&nbsp;</a> <a id=
+"nexttrack" onclick="client.trackview.goToNextTrack();" class=
+"button next" title=
+"Anzeigen nächsten Titel">&nbsp;→&nbsp;</a></div>
+<div id="networkstatus" class="statusoverlay">
+<span>〈•••〉</span><br>
+Wiedergabe Stalled<br>
+Netzwerkverbindung prüfen</div>
+<div id="pausestatus" class="statusoverlay" onclick=
+"client.execute('RESUME');"><span>|| Angehalten</span><br>
+&nbsp;</div>
+<div id="stoppedstatus" class="statusoverlay" onclick=
+"client.execute('PLAY');"><span>█ Stopped</span><br>
+&nbsp;</div>
+<div id="norequests" class="statusoverlay">
+<span>Keine anträge</span><br>
+Anfordern etwas musik.</div>
+<div id="needplaylists" class="statusoverlay" onclick=
+"viewmanager.show ('source');"><span>Keine playlisten</span><br>
+Bitte fügen Sie einige Quellen.</div>
+<div id="needmixselections" class="statusoverlay" onclick=
+"viewmanager.show ('playlist');"><span>Mix ist leer</span><br>
+Playlists zu mischen wählen.</div>
+<div id="go" class="statusoverlay" onclick=
+"client.execute ('PLAY');"><span>▶&nbsp;Wiedergabe</span><br>
+&nbsp;</div>
+<div id="controller">
+<div><span id="timepoint" class="time">&nbsp;</span> <span id=
+"ratings"><a id="overplayed" class="button privowner" onclick=
+"client.trackview.rateOverplayed();" title=
+"Sie das Lied zu spielen nicht für einen Monat.">♻</a> <span id=
+"trackrating">&nbsp;</span></span> <span id="duration" class=
+"time">&nbsp;</span></div>
+<div id="statusbar">
+<div id="progressbar" style="width:50%;"><span style=
+"display:none;">&nbsp;</span></div>
+</div>
+</div>
+</div>
+<div id="trackdetails">
+<div id="trackname"><a id="additionalinfo" target="_blank" href=
+"http://deviousfish.com/pianod"><span class=
+"value">&nbsp;</span></a> <a class="button seed privowner" onclick=
+"client.trackview.toggleSeed ('song');" title=
+"Toggle Song Samen.">種</a></div>
+<div id="artistname"><a id="artistinfo" onclick=
+"client.trackview.moreInfo('artist');"><span class=
+"value">&nbsp;</span></a> <a class="button seed privowner" onclick=
+"client.trackview.toggleSeed ('artist');" title=
+"Toggle Künstler Samen.">種</a></div>
+<div id="albumname"><a id="albuminfo" onclick=
+"client.trackview.moreInfo('album');"><span class=
+"value">&nbsp;</span></a> <a class="button seed privowner" onclick=
+"client.trackview.toggleSeed ('album');" title=
+"Toggle Album Samen.">種</a></div>
+<div id="songplaylist"><a class="privowner" onclick=
+"client.trackview.showSeeds ();"><span class=
+"value">&nbsp;</span></a> <a class="button seed privowner" onclick=
+"$('#addplaylistfromtrack').show();" title=
+"Samen hinzufügen oder erstellen Playlist von Song, Album oder Künstler.">+</a></div>
+</div>
+</div>
+<input id="volume" class="privuser" type="range" min="-40" max="0"
+step="1" title="Volume" onchange=
+"client.trackview.setVolume ();"></div>
+<div id="queueview" style="display:none;">
+<h2>Warteschlange</h2>
+<div>
+<table id="queue" class="scrolling">
+<thead>
+<tr>
+<th style="display:none;">&nbsp;</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>&nbsp;</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div id="searchview" style="display:none;">
+<h2>Musiksuche</h2>
+<label for="searchtype">Suche</label> <select id=
+"searchtype">
+<option value="any">Beliebig</option>
+<option value="song">Lied</option>
+<option value="artist">Künstler</option>
+<option value="album">Album</option>
+<option value="playlist">Genre</option>
+<option value="request">Nur auf Anfrage erhältlich Songs</option>
+</select> <label for="searchmethod">Methode</label>
+<select id="searchmethod" onchange=
+"client.searchview.selectMethod();">
+<option value="like">Spiel Wörter</option>
+<option value="where">Spiel Satz</option>
+<option value="expr">Expression</option>
+</select> <label for="searchfor">Abgleichen</label>
+<input id="searchfor" type="text" placeholder=
+"Suchtext"> <a class="button" id=
+"searchbutton" onclick=
+"client.searchview.search();">Suche</a> <a class=
+"button privdeejay" id="searchrequest" onclick=
+"client.searchview.request();">Alle Anfordern</a>
+<a class="button privuser" id="searchplaytransient" onclick=
+"client.searchview.playTransient();">Mix</a>
+<a class="button" id="searchcreate" onclick=
+"client.searchview.showAllResultsMenu();">Seed</a>
+<div id="searchaction" class="popup">
+<div><a class="close button" onclick=
+"$('#searchaction').hide();">✖</a> <span id=
+"addfromsearchname">&nbsp;</span> (<span id=
+"addfromsearchtype">&nbsp;</span>)<br>
+<span id="searchinfosource">&nbsp;</span> (<span id=
+"searchinfoname">&nbsp;</span>)
+<div class="actiongrouping">
+<p>Fügen Sie Startwert für Zufallsgenerator vom Rechercheresultat hinzu</p>
+<label for="addfromsearchtarget">Wiedergabeliste:</label>
+<select id="addfromsearchtarget">
+<option value="">Wählen Sie Titelliste aus...</option>
+</select>
+<ul class="actions">
+<li><a class="button" onclick=
+"client.searchview.addSeed ();">Samen hinzufügen</a></li>
+</ul>
+</div>
+<div class="actiongrouping">
+<p>Create playlist from search result</p>
+<label for=
+"createfromsearchsource">Neue Wiedergabeliste auf Quelle:</label>
+<select id="createfromsearchsource">
+<option>&nbsp;</option>
+</select> <input id="createfromsearchplaylist" type="text"
+placeholder="Neue Wiedergabeliste name">
+<div id="createfromsearchtype"><input id=
+"createfromsearchtypestandard" name="createfromsearchtype" type=
+"radio" value="standard"> <label for=
+"createfromsearchtypestandard">StandardTitelliste</label>
+<input id="createfromsearchtypesmart" name="createfromsearchtype"
+type="radio" value="smart"> <label for=
+"createfromsearchtypesmart">Intelligente Titelliste</label></div>
+<ul class="actions">
+<li><a id="createplaylist" class="button" onclick=
+"client.searchview.createPlaylist() ;">Neue Wiedergabeliste zu erstellen</a></li>
+</ul>
+</div>
+</div>
+</div>
+<table id="searchresults" class="scrolling">
+<thead>
+<tr>
+<th style="display:none;">&nbsp;</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>&nbsp;</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="playlistview" style="display:none;"><span class=
+"pagenumber">Seite&nbsp; <span id="playlistpage">&nbsp;</span>
+&nbsp;von&nbsp; <span id="playlistpages">&nbsp;</span>
+</span>
+<h2>Titellisten</h2>
+<span class="pager"><a class="button" onclick=
+"client.playlistview.previous()">↑</a> <a class=
+"button" onclick="client.playlistview.next()">↓</a>
+<select id="showmode" onchange=
+"client.playlistview.changeShownMode()">
+<option value="playlist">Wählen Sie Titelliste aus...</option>
+<option value="mix">Mix ausgewählten Wiedergabelisten</option>
+<option value="everything">Mix alles</option>
+<option value="auto">Autotune Wiedergabelisten</option>
+</select> <a id="selectmode" class="button" onclick=
+"client.playlistview.selectMode()" title=
+"Wählen Sie den Wiedergabemodus und die Wiedergabe fortzusetzen.">▶</a></span>
+<ul id="playlistlist" class="columnar privinfluence">
+<li>Keine playlisten</li>
+</ul>
+</div>
+<div id="seedview" style="display:none;">
+<h2>Revise Wiedergabelisten</h2>
+<label for="reviseplaylist">Play</label>
+<select id="reviseplaylist" onchange=
+"client.seedview.selectPlaylist();">
+<option value="">Wählen Sie Titelliste aus...</option>
+</select>
+<div id="renameplaylist" class="popup">
+<div><a class="close button" onclick=
+"$('#renameplaylist').hide();">✖</a>
+<p>Rename playlist</p>
+Source: <span id="renameplaylistsourcetype">&nbsp;</span> /
+<span id="renameplaylistsourcename">&nbsp;</span>
+<p><label for=
+"renameplaylistoldname">Old playlist name:</label> <input id=
+"renameplaylistoldname" type="text" disabled> <label for=
+"renameplaylistnewname">New playlist name:</label> <input id=
+"renameplaylistnewname" type="text"></p>
+<ul class="actions">
+<li><a class="button" onclick=
+"client.seedview.renamePlaylist();">Rename playlist</a></li>
+</ul>
+</div>
+</div>
+<div>
+<table id="seedsexisting" class="scrolling">
+<thead>
+<tr>
+<th style="display:none;">&nbsp;</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>&nbsp;</td>
+</tr>
+</tbody>
+</table>
+<a class="button" onclick=
+"client.seedview.showRenamePlaylist();">Rename playlist</a>
+<a class="button" onclick=
+"client.seedview.removePlaylist();">Entfernen playlist komplett</a></div>
+</div>
+<div id="activityview" style="display:none;">
+<h2>Letzte Aktivitäten</h2>
+<ul id="recentactivity" class="scrolling">
+<li>&nbsp;</li>
+</ul>
+<textarea id="yellmessage" rows="4" placeholder=
+"Geben Meldung"></textarea>
+<br>
+<a id="yellbutton" class="button" title="Übertragung Ihrer Nachricht an andere angeschlossene pianod Nutzer."
+onclick="client.activityview.yell()">Yell it</a></div>
+<div id="userview" style="display:none;">
+<h2>Benutzerpflege</h2>
+<div class="accordion">
+<h3>Zuschicken Passwort ändern</h3>
+<div><label for="oldpassword">Altes Kennwort</label>
+<input id="oldpassword" type="password"> <label for=
+"newpassword">Neues Passwort</label> <input id="newpassword"
+type="password"> <label for=
+"confirmpassword">Passwort bestätigen</label> <input id=
+"confirmpassword" type="password">
+<div><input id="shadowpassword" type="checkbox" onchange=
+"client.userview.changeShadow();"> <label for="shadowpassword"
+title=
+"Anstatt, ein Kennwort zu ändern, schalten Sie zu Ihrem Systemskennwort für pianod Authentisierung.">Nehmen Sie Systemskennwort an</label></div>
+<a class="button" onclick=
+"client.userview.changePassword();">Es ändern</a><br>
+
+Passwörter können mit dem Server in unverschlüsselter Form übermittelt. Verwenden Sie nicht einen wichtigen vergessen, wie die, die für Ihr Bankkonto.</div>
+<h3 class="privadmin">Erstellen Sie ein Benutzer</h3>
+<div><label for="createusername">Benutzername</label>
+<input id="createusername" type="text"> <label for=
+"createusertype">Berechtigungsstufe</label> <select id=
+"createusertype">
+<option value="listener">Zuhörer</option>
+<option value="user">Norm</option>
+<option value="admin">Verwalter</option>
+</select> <label for=
+"createpassword">Passwort</label> <input id=
+"createpassword" type="password"> <label for=
+"createconfirmpassword">Passwort bestätigen</label> <input id=
+"createconfirmpassword" type="password"> <a class="button" onclick=
+"client.userview.createUser()">Benutzer</a><br>
+Passwörter können mit dem Server in unverschlüsselter Form übermittelt. Verwenden Sie nicht einen wichtigen vergessen, wie die, die für Ihr Bankkonto.</div>
+<h3 id="alter_user" class="privadmin">Alter ein Benutzer</h3>
+<div><label for="alterusername">Benutzername</label>
+<select id="alterusername" onchange=
+"client.userview.selectAlterUser();">
+<option value=''>Benutzer auswählen ...</option>
+</select> <label for="alterusertype">Rank & amp; Berechtigungen</label>
+<select id="alterusertype" onchange=
+"client.userview.changeType();">
+<option value="disabled">Untauglich</option>
+<option value="listener">Zuhörer</option>
+<option value="user">Norm</option>
+<option value="admin">Verwalter</option>
+</select>
+<ul class="privilegelist">
+<li><input id="privilegedeejay" type="checkbox" onchange=
+"client.userview.changePrivilege ('deejay')"> <label for=
+"privilegedeejay">Request music and manage queue</label></li>
+<li><input id="privilegeservice" type="checkbox" onchange=
+"client.userview.changePrivilege ('service')"> <label for=
+"privilegeservice">Hinzufügen, entfernen oder leihen Quellen</label></li>
+<li><input id="privilegeinfluence" type="checkbox" onchange=
+"client.userview.changePrivilege ('influence')"> <label for=
+"privilegeinfluence">Einfluss Autotuned Wiedergabelisten</label></li>
+</ul>
+<a class="button" onclick=
+"client.userview.resetPassword()">Passwort zurücksetzen</a>
+<a class="button" onclick=
+"client.userview.deleteUser()">Benutzer löschen</a>
+<p class="note">Achten Sie darauf, Administrator Rang von allen Benutzern, die Sie ohne Administrator verlassen zu entfernen.</p>
+</div>
+<h3 id="kick_user" class="privadmin">Kick-Nutzer</h3>
+<div>
+<ul id="onlineusers" class="actions">
+<li>user list goes here</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+<div id="status"><a id="showerrors" onclick=
+"$('#errors').show();">ℹ</a> <span class=
+"value">&nbsp;</span></div>
+<script type="module">
+      window.assert = function() {};
+      
+        import { Client } from './client.lib.jsm';
+      
+
+      /* Set up global variables */
+      var translator = new Translate();
+      window.translate = translator.translate;
+
+      /* Set global execute function */
+      window.client = new Client ();
+</script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+contributors
+============
+pianod uses several libraries that provide its foundation.  See COPYING
+for a full list.
+
+Pianod was developed by Perette Barella <perette@deviousfish.com>, with help,
+encouragement, improvements and fixes from Nick Brown, Jon Chelton, Michael
+George, Ted Hess, Michael R. Hines, Gary Koch, Ansen F. Labardee, Peter Li,
+Henry So, Martin Stumpf, and Evi Vanoost.  My thanks to them.
+
+Inspiration for several features (filtering, biasing algorithms) were
+inspired by mserv by James Ponder.  http://mserv.org
+
+My thanks, also, to those who created and maintain the included and
+non-included packages pianod depends on (curl, various TLS packages, libao,
+libsdl, gstreamer, taglib, ffmpeg, gzstream, etc.), as well as those building
+the compilers and debuggers, autoconf and automake, and other tools which make
+this possible.
+
+Although no longer used, PromyLOPh's libpiano was critical for many years,
+and their [Pandora documentation](https://6xq.net/pandora-apidoc/) was
+critical in writing my own integration.  Thank you for the starting points!
+
+Lastly, thanks to the many sites that offer solutions to technical snags,
+especially http://StackOverflow.com

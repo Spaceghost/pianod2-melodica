@@ -1,0 +1,256 @@
+/* pianod web client - internationalization/translation support
+   Copr. 2015-2017 Perette Barella/Devious Fish
+   All rights reserved.
+*/
+
+
+
+
+var Translate = function () {
+	function Translate () {
+		/* Nothing */
+	};
+
+	/* Constants */
+	var ERRORS = {
+
+
+		200: "Success",
+		203: "Start der Daten",
+		204: "Keine Daten oder Datenende",
+		206: "Spiel gefunden",
+		207: "Wert wurde angenähert",
+		210: "Befehl erkannt hat, aber Maßnahmen anhängig",
+		300: "Details",
+		301: "Proxy-Einstellungen ungültig",
+		303: "Ungültige Playlist",
+		304: "Artikel nicht gefunden",
+		400: "Bad Befehls",
+		401: "Nicht für angeforderte Aktion genehmigt",
+		402: "Vorgang fehlgeschlagen",
+		403: "Bereits existiert",
+		404: "Gewünschten Artikel nicht gefunden",
+		405: "Aktion gilt nicht für aktuellen Stand",
+		406: "Ungültige Login oder Passwort",
+		407: "Parameter ungültig",
+		408: "Play Personalisierung gescheitert",
+		409: "Konflikt aufgetreten",
+		410: "Temporary Versagen, zukünftigen Fertigstellung unbekannt",
+		411: "Quote überschritten",
+		412: "Müssen angemeldet sein,",
+		413: "Nicht unterstützt",
+		414: "Unzureichende Ressourcen",
+		415: "Grenze erreicht",
+		416: "Betrieb nur auf primären Wiedergabelisten gültig",
+		417: "Falsche Art Handlungs",
+		418: "Persistent Ausdruck oder Wert erforderlich",
+		460: "Aktion nicht durch Quelle unterstützt",
+		461: "Wert nicht durch Quelle unterstützt",
+		462: "Aktion nicht auf Medien-Manager möglich",
+		498: "Es ist ein Fehler in pianod",
+		499: "Nicht implementiert",
+		500: "Interner Serverfehler",
+		501: "Nichts zu spielen",
+		502: "Netzfehler",
+		503: "Dienst heruntergefahren",
+		504: "Authentifizierungsfehler",
+		505: "Insufficent Ressourcen",
+		507: "Fehler, der Pandora verbunden ist",
+		508: "Befehlsausführung unvollständig",
+		509: "Erlaubnis verweigert",
+		510: "Ausnahme",
+		511: "Netzwerk Timeout",
+		512: "Kann Audio-Ausgang nicht öffnen",
+		'Bogus': 'Bogosity'
+	};
+
+
+
+	var MESSAGES = {
+			"ERROR_LOGIN_FAILED": "LOGON verlassen",
+	"ERROR_CONNECTION_FAILED": "Anschluss verlassen.",
+	"ERROR_LOGIN_BAD_CREDENTIALS": "Falsche Bescheinigungen.",
+	"CHECK_PORT_NUMBER": "Portnummer überprüfen.",
+	"LOGIN_SESSION_STARTING": "Öffnungsanschluß zu %1$s.",
+	"LOGIN_SESSION_ENDED": "Sitzung beendet.",
+	"STATUS_AUTHENTICATION_OK": "Authentication successful.",
+	
+
+		"HEADING_ALBUM": "Album",
+	
+		"HEADING_ARTIST": "künstler",
+	
+		"HEADING_SONG": "Lied",
+	
+		"HEADING_GENRE": "Genre",
+	
+		"HEADING_TYPE": "Typen",
+	
+		"HEADING_SEEDTYPE": "Kamen Typen",
+	
+		"HEADING_PLAYLIST": "Titelliste",
+	
+		"HEADING_YEAR": "Jahr",
+	
+		"HEADING_DURATION": "Dauer",
+	
+		"HEADING_ACTION": "Tätigkeiten",
+	
+
+				"Cap_song": "Lied",
+	"Cap_artist": "künstler",
+	"Cap_album": "Album",
+	"Cap_playlist": "Titelliste",
+	
+
+		"lower_song": "lied",
+	"lower_artist": "künstler",
+	"lower_album": "album",
+	"lower_playlist": "titelliste",
+	
+
+
+
+				"PROMPT_CONFIRM_DELETE": "Sind Sie Sie möchten %1$s löschen sicher?",
+	"CONFIRM_DELETE": "%1$s gelöscht.",
+	"CONFIRM_ADD": "%1$s hinzugefügt.",
+	"CONFIRM_ADDED_TO": "Zusätzliches %1$s zu %2$s.",
+	"CONFIRM_CREATE": "%1$s erstellt.",
+	"CONFIRM_RENAME": "%1$s renamed to %2$s.",
+	
+
+
+				"ACTION_TABLE_QUE": "+Que",
+	"ACTION_TABLE_DEQUE": "✖Deque",
+	"ACTION_TABLE_SKIP": "Zeilensprung",
+	"ACTION_TABLE_SEED": "+Samen",
+	"ACTION_TABLE_UNSEED": "✖Remove Samen",
+	
+
+
+
+				"CONFIRM_CLEAR_REQUESTS": "Request queue cleared.",
+	"SELECT_PLAYLISTS_NONE": "Keine Titellisten",
+	"ERROR_NO_USABLE_SOURCES": "Keine verwendbaren Quellen.",
+	"CONFIRM_RATE_OVERPLAYED": "Liedbewertung vorübergehend degradiert.",
+	"CONFIRM_ADD_SEED_TYPE_TO": "Zusätzlicher %1$s Startwert für Zufallsgenerator zu %2$s.",
+	"CONFIRM_DEQUEUED": "Geforderte Musik beendet.",
+	"INDICATOR_AUTOTUNING": "∫",
+	"STATUS_NOTHING_PLAYING": "There is nothing playing right now.",
+	"ERROR_QUEUEHISTORY_RANGE": "No further items.",
+	
+
+
+
+				"INFO_SEARCH_RESULTS_OMITTED": "Einige Resultate wurden ausgelassen: ",
+	"ERROR_CHOOSE_PLAYLIST": "Wählen Sie bitte eine Ziel-Titelliste.",
+	"ERROR_NEED_PLAYLIST_NAME": "Geben Sie bitte einen Titellistenamen an.",
+	"CONFIRM_QUEUED": "Anträge eingereiht.",
+	"ERROR_NEED_SEARCH_QUERY": "Tragen Sie bitte eine Rechercheabfrage ein.",
+	"MESSAGE_CREATE_WITH_ALL_RESULTS": "alle suchen Resultate",
+	"MESSAGE_CREATE_APPLIES_TARGET": "trifft auf Zielquelle zu",
+	
+
+
+
+				"ERROR_NO_SOURCES": "Stellen Sie bitte einige Quellen zur Verfügung.",
+	"ERROR_NEED_SOURCE_SELECTION": "Please choose a source.",
+	"ERROR_NEED_SOURCE_TYPE": "Please choose a source type.",
+	"CONFIRM_SOURCE_ADDED": "Die Quelle, die hinzugefügt wird, kann einen Moment nehmen, um betriebsbereit zu sein.",
+	"CONFIRM_SOURCE_REMOVED": "Quelle gelöscht.",
+	"CONFIRM_SOURCE_SELECTED": "Quelle ausgewählt.",
+	
+
+		"ADDSOURCE_NULL_PATH": "Spezifizieren Sie bitte Pfad/Faltblatt für Musik.",
+	
+
+
+
+				"ACTION_SKIP": "Zeilensprunglied",
+	
+		"TOOLTIP_SKIP": "Den aktuellen Titel überspringen",
+	
+		"ACTION_DEQUEUE": "Beenden Sie Lied.",
+	
+		"TOOLTIP_DEQUEUE": "Beenden Sie ein bevorstehendes Lied.",
+	
+		"ACTION_RECUE": "Request song",
+	
+		"TOOLTIP_RECUE": "Request this song again.",
+	
+
+		"PROMPT_CREATE_PLAYLIST_FROM": "Stellen Sie Titelliste von %1$s her",
+	"PROMPT_ADD_SEED_FROM": "Fügen Sie Startwert für Zufallsgenerator von %1$s hinzu",
+	
+
+
+
+				"PROMPT_CONFIRM_DELETE_SEED": "Sind Sie Sie möchten den Startwert für Zufallsgenerator für %1$s löschen sicher?",
+	"ERROR_SELECT_PLAYLIST": "Wählen Sie bitte eine Titelliste aus.",
+	
+
+
+
+				"HEADING_LISTENERS_ONLINE": "Zuhörer online:",
+	"ERROR_ACTIVITY_DISABLED": "Aktivitätsmeldungen sind untauglich.",
+	"ERROR_YELL_NO_MESSAGE": "Keine Meldung zum zu kreischen.",
+	
+
+
+
+				"PROMPT_OLD_PASSWORD": "Altes Kennwort",
+	"PROMPT_NEW_PASSWORD": "Neues Passwort",
+	"PROMPT_PIANOD_PASSWORD": "pianod Kennwort",
+	"PROMPT_SYSTEM_PASSWORD": "Systemskennwort",
+	
+
+		"PROMPT_CONFIRM_NO_PASSWORD": "Dieses löscht %1$s Kennwort, also können sie ohne ein Kennwort anmelden. Dieses ist unsicher.  Sind Sie sicher?",
+	"CONFIRM_USER_UPDATED": "Benutzer %1$s aktualisiert.",
+	"CONFIRM_PASSWORD_CHANGE": "Kennwort ist geändert worden.",
+	"ERROR_CANNOT_GET_USER_LIST": "Kann Benutzerliste nicht zurückholen.",
+	"ERROR_PASSWORDS_UNMATCHED": "Neue Kennwörter gleichen nicht ab.",
+	"ERROR_SELECT_USER": "Wählen Sie bitte einen Benutzer aus.",
+	"LABEL_KICK_VISITORS": "All visitors",
+	"CONFIRM_KICK": "Benutzer %1$s abgemeldet.",
+	
+
+		'Bogus': 'Bogosity'
+	};
+	
+	/* Private variables */
+
+	/* Private functions */
+	if (typeof (assert) == 'undefined') {
+		var assert = function () { };
+	}
+
+	/* Return a function object, which will see all of
+	   the above via the closure. */
+	Translate.prototype.translate = function (value) {
+		if (typeof (value) == 'string') {
+			// Translate a string
+			var message = value in MESSAGES ? MESSAGES [value] : value;
+			// Perform printf-style positional string substitutions.
+			for (var i = 1; i < arguments.length; i++) {
+				message = message.replace (RegExp ("%" + i + "\\$s", "g"), arguments [i]);
+			}
+			return message;
+		}
+		// Translate a Football comm response.
+		assert (arguments.length == 1);
+		assert (typeof (value) == 'object');
+		assert ('code' in value);
+		if (typeof (value) != 'object' || !('code' in value)) {
+			return 'Bad translation request';
+		}
+		if (!(value.code in ERRORS)) {
+			return value.text;
+		}
+		// Replace value up to first colon.
+		var pieces = value.text.split (':');
+		pieces [0] = ERRORS [value.code];
+		return pieces.join (':')
+	};
+	return Translate;
+}();
+

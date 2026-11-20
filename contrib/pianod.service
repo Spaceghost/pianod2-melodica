@@ -1,0 +1,23 @@
+# To start pianod at boot, customize this file to your needs and install at
+#   /usr/local/lib/systemd/system/pianod.service
+# then `systemctl daemon-reload`
+
+[Unit]
+Description=Pianod Music Daemon.
+After=sound.target
+After=pulseaudio.socket
+After=network-online.target
+# After=alsa-util
+
+[Service]
+# systemd records times; -T suppresses pianod logging times
+ExecStart=/usr/local/bin/pianod -T
+Restart=always
+RestartSec=17
+# Specify the user to run as, change as appropriate
+User=music
+Requires=pulseaudio.socket
+
+[Install]
+WantedBy=default.target
+

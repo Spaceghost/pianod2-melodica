@@ -1,0 +1,1692 @@
+#!/bin/ksh
+kornshell=/bin/ksh
+######################################################################
+# Program:	pianod_unittest
+# Purpose:	Exercises various pianod functions to make sure
+#		they work correctly.
+# Arguments:	A list of tests to perform.  If no list is given,
+#		exercises all tests.
+# Environment:	PANDORA_USER & PANDORA_PASSWORD - Username and password
+#		for a Pandora account.  If not given, or the test
+#		prerequisite playlists do not exist, these tests are skipped.
+# Author:	Perette Barella
+#---------------------------------------------------------------------
+
+if [[ $($kornshell --version 2>&1) != *"AT&T"* ]]
+then
+	print "$arg0: $kornshell does not look like a proper Korn Shell.  AT&T ksh93 is required." 1>&2
+	# Status 77 is used by Automake for skipped tests.
+	exit 77
+fi
+
+arg0=$(basename $0)
+TESTDATA=TestData
+CONFIGDIR="${TESTDATA}/pianod2"
+STARTSCRIPT="${CONFIGDIR}/startscript"
+USERDATA="${CONFIGDIR}/passwd"
+DAEMONOUTPUT="${TESTDATA}/pianod2-output"
+PRIMARYSESSION="${TESTDATA}/primary-session"
+SECONDUSER="${TESTDATA}/second-output"
+SECONDSESSION="${TESTDATA}/second-session"
+PIANO="${srcdir:-.}/contrib/piano"
+HTML="${srcdir:-.}/html"
+
+# If the other end closes connection, nc doesn't notice until
+# it's got something to send.  Prefer telnet, which exits
+# immediately when the connection closes.
+if whence -q telnet
+then
+	TELNET=telnet
+elif whence -q nc
+then
+	TELNET=nc
+else
+	print "$arg0: Neither telnet nor nc found." 1>&2
+	exit 1
+fi
+
+PLAYLIST1="${PANDORA_PLAYLIST1:-disco}"
+PLAYLIST2="${PANDORA_PLAYLIST1:-jazz}"
+PLAYLIST3="${PANDORA_PLAYLIST1:-ominous}"
+
+# If we're outputting to a real terminal, use colors
+if [[ -t 1 ]]
+then
+	TPUT_BAD=$(tput setaf 1)
+	TPUT_GOOD=$(tput setaf 2)
+	TPUT_WARN=$(tput setaf 5)
+	TPUT_BOLD=$(tput bold)
+	TPUT_RESET=$(tput sgr0)
+fi
+
+# Use different port in case a regular instance is running
+PIANOD=${builddir:-.}/src/pianod
+export PIANOD_PORT=5180
+export PIANOD_HOST=localhost
+
+rm -rf "${TESTDATA}"
+mkdir -p "${TESTDATA}/pianod2" || exit 1
+
+# Check for supporting files
+if [ ! -x "$PIANOD" ]
+then
+	print "$PIANOD executable not found" 1>&2
+	exit 1
+fi
+
+# Process command line options
+VERBOSE=false
+VERBOSEFLAG=""
+BREAKONFAIL=false
+USAGE=false
+LISTTESTS=false
+PIANOD_OPTIONS=""
+while getopts 'bvhl' option
+do
+	case "$option" in
+		l)	LISTTESTS=true ;;
+		v)	[ "$VERBOSEFLAG" != "" ] && PIANOD_OPTIONS="-Z 0x2bf"
+			$VERBOSE && VERBOSEFLAG="-cv"
+			VERBOSE=true ;;
+		b)	BREAKONFAIL=true ;;
+		*)	USAGE=true ;;
+	esac
+done
+shift $(($OPTIND - 1))
+
+# ksh 'sleep' builtin is broken in macOS Sierra
+function sleep {
+	/bin/sleep "$@"
+}
+[ "$(uname -s)" != "Darwin" -o "$(uname -r | cut -d. -f1)" != "16" ] &&
+	unset -f sleep
+
+# Wrapper for piano shell script
+function piano {
+	$VERBOSE && print -- "Executing [$PIANOD_USER/$PIANOD_PASSWORD]:" $@ 1>&2
+	$PIANO $VERBOSEFLAG "$@"
+	typeset status=$?
+	$VERBOSE && print -- "Command $* returned: $status" 1>&2
+	return $status
+}
+
+# Start pianod without resetting everything
+function restart_pianod {
+	${PIANOD} -p ${PIANOD_PORT} -d ${TESTDATA} -c "$HTML" $PIANOD_OPTIONS > "${DAEMONOUTPUT}" 2>&1 &
+	[ $? -ne 0 ] && print "Unable to start pianod; test abended." && exit 1
+	PIANOD_PID=$!
+	# Make the pianod server is up and running
+	startup=30
+	while ! piano get privileges >/dev/null 2>&1
+	do
+		let startup=startup-1
+		if [ $startup -le 0 ]
+		then
+			fail "$TEST_ID: Failure starting pianod."
+			print "Unit test script failure."
+			shutdown_pianod
+			exit 1
+		fi
+		sleep 2
+	done
+}
+
+# Reset everything to a known state and then start pianod
+function start_pianod {
+	rm -f "${TESTDATA}"/pianod2/*
+	cat << EOF > "${STARTSCRIPT}"
+user admin admin
+create user user user
+create listener listener listener
+create user disabled disabled
+set user rank disabled disabled
+set visitor rank disabled
+EOF
+	typeset var val
+	for var in LIBRARY DRIVER DEVICE ID OPTIONS SERVER CROSSFADE_DURATION
+	do
+		eval "val=\"\$PIANOD_UNITTEST_AUDIO_${var}\""
+		if [ "$val" != "" ]
+		then
+			print "room reconfigure ${var/_/ } \"$val\"" >> "${STARTSCRIPT}"
+		fi
+	done
+	unset PIANOD_USER
+	unset PIANOD_PASSWORD
+	TEST_OK=true
+	SKIP_TEST=false
+	restart_pianod
+}
+
+function do_admin {
+	$VERBOSE && print -- "Executing [admin/admin]:" $@ 1>&2
+	piano -U admin -P admin "$@"
+}
+
+# Kill pianod, waiting for it to shutdown before returning.
+function shutdown_pianod {
+	$rERBOSE && print -- "Shutting down pianod (PID $PIANOD_PID)." 1>&2
+	kill -0 $PIANOD_PID || fail "pianod process not running at end of test."
+	# forcibly kill process if it doesn't shutdown gracefully
+	(sleep 10; kill $PIANOD_PID; sleep 10; kill -9 $PIANOD_PID) 1>/dev/null 2>&1 &
+	typeset kill_pid=$!
+	do_admin shutdown || warning "pianod shutdown unclean."
+	wait $PIANOD_PID
+	PIANOD_PID=""
+	$VERBOSE && print -- "pianod shutdown complete" 1>&2
+	sleep 1
+	kill -9 $kill_pid >/dev/null 2>&1
+	if $VERBOSE || ! $TEST_OK
+	then
+		print "Daemon output follows:"
+		sed 's/^/	/' "${DAEMONOUTPUT}"
+		rm "${DAEMONOUTPUT}"
+	fi
+}
+
+
+
+function check_for_source {
+	typeset source_name="$1" count
+	count=$(piano -d -U user -P user source list type |
+		grep -wc -- "$source_name")
+	[ "$count" -ne 0 ]
+	return $?
+}
+
+# Set up a single requirement/prerequisite.
+# Returns 0 on success, non-0 on missing prerequisites.
+function setup {
+	typeset demand="$1" param="$2" count
+	case "$demand" in
+	    fail|failure)
+		return 1
+		;;
+	    pandora)
+		check_for_source pandora || return 1
+		[ "$PANDORA_USER" = "" -o "$PANDORA_PASSWORD" = "" ] && return 1
+		[ "$param" = "credentials" ] && return 0
+		do_admin pandora user "$PANDORA_USER" "$PANDORA_PASSWORD" wait $param
+		return $?
+		;;
+	    playlist)
+		count=$(piano -d -U user -P user playlist list | grep -ci "^$param\$")
+		[ $count -eq 1 ]
+		return $?
+		;;
+	    tonegenerator)
+		check_for_source tonegenerator || return 1
+		if [ "$param" = "restore" ]
+		then
+			do_admin tonegenerator use admin wait
+			return $?
+		fi
+		do_admin tonegenerator activate wait $param
+		return $?
+		;;
+	    filesystem)
+		check_for_source filesystem || return 1
+		if [ "$param" = "restore" ]
+		then
+			do_admin filesystem use admin wait
+			return $?
+		fi
+		# Get the root-relative path to here
+		typeset path
+		path="$(cd "${srcdir:-.}" && /bin/pwd)"
+		[ $? -ne 0 -o "$path" = "" ] && return 1
+		# We're looking for cookies.mp3, but let it search; it's
+		# a good test too.
+		do_admin filesystem add "${path}/src/mediaunits/filesystem" wait $param
+		return $?
+		;;
+	    curl)
+		whence curl >/dev/null
+		return $?
+		;;
+	esac
+	return 1
+}
+
+# Set up server for testing.  Accept a list of requirements, validate that
+# each one is available.  Return 0 on ready, non-0 on missing prerequisites.
+function require {
+	typeset requirement param demand
+	for requirement in "$@"
+	do
+		print -- "$requirement" | IFS=":" read demand param
+		if ! setup "$demand" "$param"
+		then
+			warning "Requirement $requirement not available; skipping test."
+			SKIP_TEST=true
+			return 1
+		fi
+	done
+	return 0
+}
+
+# Validate that a pattern is found a certain number of times in a file.
+function expect_check {
+	typeset file="$1"
+	typeset count="$2"
+	shift 2
+	typeset match=$(egrep -ci -- "$*" "$file")
+	if [ $match -ne $count ]
+	then
+		fail "User output contains wrong number of pattern matches."
+		print -- "Pattern: '$*'"
+		print "Expected $count, found $match."
+		print "Transcript of $file:"
+		cat "$file" | sed 's/^/    /'
+	else
+		success "Pattern okay ($match=$count): '$*'"
+	fi
+}
+
+
+# Execute a command, collecting output to a file for later validation.
+function perform {
+	piano -c "$@" > "$PRIMARYSESSION"
+	typeset status=$?
+	[ $status -ne 0 ] &&
+		fail "perform failed: $*"
+	if $VERBOSE || [ $status -ne 0 ]
+	then
+		print -- "Session transcript:"
+		print -- "    $*"
+		sed 's/^/    /' "$PRIMARYSESSION"
+		print -- "    Exit status: $status"
+	fi
+	return $status
+}
+
+function expect {
+	expect_check "$PRIMARYSESSION" "$@"
+}
+
+# Start a secondary connection to pianod in the background
+# Collect output, and give it a mark so we can track subsequent
+# data collected on it.
+function second_user {
+	SECOND_USER="$1"
+	(print -- "user $1 $1"; sleep 300) |
+		${TELNET} $PIANOD_HOST $PIANOD_PORT > "$SECONDUSER" &
+	SECOND_PID=$!
+	sleep 1
+	do_admin "yell" "SECOND-USER-IS-UP"
+}
+
+# Shutdown the second connection (if needed) and validate that
+# a pattern showed up a certain number of time on that connection.
+function second_expect {
+	if [ "$SECOND_PID" != "" ]
+	then
+		do_admin kick user "$SECOND_USER"
+		(sleep 10; kill $SECOND_PID) >/dev/null 2>&1 &
+		wait $SECOND_PID
+		SECOND_PID=""
+		# Extract the messages after the secondary user started up
+		if [ $(grep -c SECOND-USER-IS-UP "$SECONDUSER") -ne 1 ]
+		then
+			fail "Secondary user session broken; transcript follows:"
+			sed 's/^/    /' "$SECONDUSER"
+			return
+		fi
+		# Find the session-ready marker, use portion afer that.
+		typeset n=$(grep -n SECOND-USER-IS-UP "$SECONDUSER" | cut -d: -f1)
+		tail -n+$((n+1)) "$SECONDUSER" > "$SECONDSESSION"
+		if $VERBOSE
+		then
+			print -- "Secondary session transcript:"
+			sed 's/^/    /' "$SECONDSESSION"
+		fi
+	elif [ ! -f "$SECONDUSER" -o ! -f "$SECONDSESSION" ]
+	then
+		fail "Second session files missing."
+		return 1
+	fi
+	expect_check "$SECONDSESSION" "$@"
+}
+
+
+function grouping {
+	print "${TPUT_BOLD}$*${TPUT_RESET}"
+}
+
+function warning {
+	print -- "${TPUT_WARN}$*${TPUT_RESET}"
+}
+	
+function success {
+	[ "$1" = "-h" ] && shift && print -n -- "$TPUT_BOLD"
+	print -- "${TPUT_GOOD}$*${TPUT_RESET}"
+}
+
+function failure {
+	[ "$1" = "-h" ] && shift && print -n -- "$TPUT_BOLD"
+	print -- "${TPUT_BAD}$*${TPUT_RESET}"
+}
+
+function fail {
+	failure "$TEST_ID: Failed: $*"
+	TEST_OK=false
+}
+
+# Choose the pianod user for testing.
+# Username and password are expected to be the same.
+function as_user {
+	export PIANOD_USER="$1"
+	export PIANOD_PASSWORD="$1"
+}
+
+# Test the unit test functions to make sure they detect pass/failure correctly.
+function test_00_unittest {
+	grouping "Checking: get privileges"
+	piano "get privileges" || fail "Expected to pass"
+	if ! $TEST_OK
+	then
+		print "Unit test problem: TEST_OK=false when it should be true."
+		shutdown_pianod
+		exit 1
+	fi
+	grouping  "Checking: Bad command"
+	piano "Expect to fail" || fail "Expected to fail"
+	if $TEST_OK
+	then
+		print "Unit test problem: TEST_OK=true when it should be false."
+		shutdown_pianod
+		exit 1
+	fi
+	grouping  "Checking: Second expect"
+	TEST_OK=true
+	second_user user
+	second_expect 0 "something totally unreasonable" || fail "Expected to Pass"
+	second_expect 1 "033 Status: Logged off" || fail "Expected to pass."
+	if ! $TEST_OK
+	then
+		print "Unit test problem: TEST_OK=false when it should be true."
+		shutdown_pianod
+		exit 1
+	fi
+	grouping  "Checking: Second expect #2"
+	second_expect 1 "something totally unreasonable" || fail "Expected to fail"
+	if $TEST_OK
+	then
+		print "Unit test problem: TEST_OK=true when it should be false."
+		shutdown_pianod
+		exit 1
+	fi
+	TEST_OK=true
+}
+
+function test_01_initial_state {
+	grouping 
+	as_user
+	piano yell Fish && fail "Visitor allowed to yell"
+	as_user disabled
+	piano yell Fish && fail "Disabled user allowed to yell"
+	as_user listener
+	piano yell Fish || fail "Guest NOT allowed to yell."
+	piano create user foo bar && fail "Guest allowed to create a user"
+	as_user user
+	piano yell Fish || fail "User NOT allowed to yell."
+	piano create user foo bar && fail "User allowed to create a user"
+	as_user admin
+	piano yell Fish || fail "Admin NOT allowed to yell."
+	piano create user foo bar || fail "Admin NOT allowed to create a user"
+}
+
+function test_user_change_password {
+	as_user user
+	piano yell "I AM USER" || fail "User could not yell"
+	piano set password user changed || fail "Password change reports failure"
+	piano yell "I AM USER" && fail "Old password working after change."
+	piano -P changed yell "I AM USER" || fail "New password not working after change"
+}
+
+function test_admin_change_password {
+	as_user user
+	piano yell "I AM USER" || fail "Could not authenticate as user"
+	piano -U admin -P admin set user password user baka
+	piano yell "I AM USER" && fail "Old password still viable."
+	piano -P baka yell "I AM USER" || fail "New password not working."
+}
+
+
+function test_user_change_level {
+	as_user admin
+
+	second_user disabled
+	piano set user rank disabled listener
+	second_expect 1 "136.*"
+	second_expect 1 "136.*: listener.*"
+
+	second_user disabled
+	piano set user rank disabled user
+	second_expect 1 "136.*"
+	second_expect 1 "136.*: user.*"
+
+	second_user disabled
+	piano set user rank disabled admin
+	second_expect 1 "136.*"
+	second_expect 1 "136.*: admin.*"
+}	
+
+
+
+function test_user_set_privilege_level {
+	as_user admin
+
+	# Check baseline privileges
+	second_user listener
+	piano set user rank listener listener || fail "Set rank failed"
+	second_expect 1 "136.*influence"
+	second_expect 0 "136.*owner"
+	second_expect 0 "136.*service"
+	second_expect 0 "136.*deejay"
+
+	second_user listener
+	piano revoke influence from listener || fail "Revoke failed"
+	second_expect 0 "136.*influence"
+	second_expect 0 "136.*owner"
+	second_expect 0 "136.*service"
+	second_expect 0 "136.*deejay"
+	
+	second_user listener
+	piano grant service to listener || fail "Grant failed"
+	second_expect 0 "136.*influence"
+	second_expect 0 "136.*owner"
+	second_expect 1 "136.*service"
+	second_expect 0 "136.*deejay"
+	
+	second_user listener
+	piano grant influence to listener || fail "Grant failed"
+	second_expect 1 "136.*influence"
+	second_expect 0 "136.*owner"
+	second_expect 1 "136.*service"
+	second_expect 0 "136.*deejay"
+
+	second_user listener
+	piano grant deejay to listener || fail "Grant failed"
+	second_expect 1 "136.*influence"
+	second_expect 0 "136.*owner"
+	second_expect 1 "136.*service"
+	second_expect 1 "136.*deejay"
+
+	piano revoke deejay from listener || fail "Grant failed"
+	second_user listener
+	piano revoke influence from listener || fail "Grant failed"
+	second_expect 0 "136.*influence"
+	second_expect 0 "136.*owner"
+	second_expect 1 "136.*service"
+	second_expect 0 "136.*deejay"
+}
+
+function test_user_delete
+{
+	as_user admin
+
+	second_user listener
+	piano delete user disabled || fail "Could not delete disabled"
+	piano delete user user || fail "Could not delete user"
+	piano delete user listener && fail "Deleted logged in listener."
+	# second_expect kicks the user and cleans up
+	second_expect 1 "033 Status: Logged off" || fail "Expected to see user logged off"
+	piano delete user listener || fail "Unable to delete listener after kicking."
+}
+
+function get_set_test {
+	typeset value="$1" response
+	shift
+	piano set "$@" "$value" || fail "Unable to set $* $value"
+	response=$(piano -d get "$@")
+	if [ "$response" != "$value" ]
+	then
+		fail "$* not returning assigned value."
+		print "Value assigned:  $value"
+		print "Value retrieved: $response"
+		return 1
+	fi
+	print "get/set $* okay"
+	return 0
+}
+function test_core_set_get_parameters {
+	as_user admin
+
+	grouping History length
+	get_set_test 10 history length
+	get_set_test 5 history length
+	piano set history length baka && fail "Set history length to nonsense."
+	piano set history length 0 && fail "0 history length accepted."
+	piano set history length 51 && fail "excessive history length accepted."
+}
+
+function test_core_volume
+{
+	as_user user
+
+	piano volume level -20
+	perform volume
+	expect 1 '141 .*: -20'
+
+	piano volume level -10
+	perform volume
+	expect 1 '141 .*: -10'
+
+	piano volume up
+	perform volume
+	expect 1 '141 .*: -9'
+
+	piano volume down
+	perform volume
+	expect 1 '141 .*: -10'
+
+	piano volume level baka && fail "Set volume to nonsense."
+	piano volume level -101 && fail "Excessively low volume accepted."
+	piano volume level 101 && fail "Ecessively high volume accepted."
+}
+
+function test_user_commands_restricted
+{
+	as_user admin
+	piano create user delete me || fail "Could not create user to delete."
+	piano grant owner to delete && fail "Grant of owner privilege worked."
+
+	for rank in disabled listener user
+	do
+		as_user $rank
+		piano create user foo bar && fail "$rank created a user."
+		piano set user rank foo admin && fail "$rank adjusted a rank."
+		piano grant service to delete && fail "$rank performed a grant."
+		piano revoke influence from delete && fail "$rank performed a revoke."
+		piano delete user delete && fail "$rank deleted a user"
+	done
+}
+
+function test_user_persistence {
+	as_user
+	piano yell "This is a test" && fail "Able to yell as unauthenticated user."
+	as_user admin
+	shutdown_pianod
+	piano yell "This is a test" && fail "Able to yell after shutting down server."
+	restart_pianod
+	piano yell "This is a test" || fail "Unable to yell after restarting server"
+	print -- "Performing initial state check to make sure users were persisted."
+	test_01_initial_state
+}
+
+
+function test_pandora_persist {
+	require pandora:credentials || return
+	perform playlist list
+	expect 0 "115.*:.*$PLAYLIST1.*"
+	piano pandora user "$PANDORA_USER" "$PANDORA_PASSWORD" shared remember name stored &&
+		fail "Able to remember credentials for unauthenticated user ."
+	as_user admin
+	piano grant service to user || fail "Unable to grant service privilege to user."
+	as_user user
+	piano pandora user "$PANDORA_USER" "$PANDORA_PASSWORD" shared remember name stored ||
+		fail "Unable to remember credentials for 'user'."
+	perform playlist list
+	expect 1 "115.*:.*$PLAYLIST1.*"
+	as_user admin
+	shutdown_pianod
+	piano yell "This is a test" && fail "Able to yell after shutting down server."
+	restart_pianod
+	piano yell "This is a test" || fail "Unable to yell after restarting server"
+	perform playlist list
+	expect 0 "115.*:.*$PLAYLIST1.*"
+	piano pandora use stored || fail "Failed attempting to use stored credentials."
+	perform playlist list
+	expect 1 "115.*:.*$PLAYLIST1.*"
+}
+
+function test_playlist_ratings
+{
+	typeset PLAYLIST1="Soothing Sounds of Moog-like Clocks"
+	typeset PLAYLIST2="Telephony's Wonders"
+	require tonegenerator:remember playlist:"$PLAYLIST1" || return
+
+	as_user admin
+	piano WITH SOURCE ID 2 PLAYLIST CREATE NAME "$PLAYLIST2" where "AT&T" || fail "Could not create playlist $PLAYLIST2"
+
+	as_user user
+	perform playlist list
+	expect 2 "120.*unrated"
+	expect 0 "120.*good"
+	expect 0 "120.*neutral"
+	expect 0 "120.*bad"
+
+	as_user admin
+	perform playlist list name "$PLAYLIST1"
+	expect 1 "120.*unrated"
+	expect 0 "120.*good"
+	expect 0 "120.*neutral"
+	expect 0 "120.*bad"
+	perform playlist list name "$PLAYLIST2"
+	expect 1 "120.*unrated"
+	expect 0 "120.*good"
+	expect 0 "120.*neutral"
+	expect 0 "120.*bad"
+
+	piano rate playlist good name "$PLAYLIST1" || fail "Could not rate playlist $PLAYLIST1"
+	perform playlist list name "$PLAYLIST1"
+	expect 0 "120.*unrated"
+	expect 1 "120.*good"
+	expect 0 "120.*neutral"
+	expect 0 "120.*bad"
+	perform playlist list name "$PLAYLIST2"
+	expect 1 "120.*unrated"
+	expect 0 "120.*good"
+	expect 0 "120.*neutral"
+	expect 0 "120.*bad"
+
+	piano rate playlist bad name "$PLAYLIST2" || fail "Could not rate playlist $PLAYLIST2"
+	perform playlist list name "$PLAYLIST1"
+	expect 0 "120.*unrated"
+	expect 1 "120.*good"
+	expect 0 "120.*neutral"
+	expect 0 "120.*bad"
+	perform playlist list name "$PLAYLIST2"
+	expect 0 "120.*unrated"
+	expect 0 "120.*good"
+	expect 0 "120.*neutral"
+	expect 1 "120.*bad"
+
+	perform playlist list
+	expect 0 "120.*unrated"
+	expect 1 "120.*good"
+	expect 0 "120.*neutral"
+	expect 1 "120.*bad"
+
+	# restart pianod and make sure the ratings were persisted
+	grouping  "Checking playlist rating persistence..."
+	shutdown_pianod
+	piano yell "This is a test" && fail "Able to yell after shutting down server."
+	restart_pianod
+	require tonegenerator:restore playlist:"$PLAYLIST1" playlist:"$PLAYLIST2" ||
+		fail "Requirements not available after restart"
+	SKIP_TEST=false
+
+	piano yell "This is a test" || fail "Unable to yell after restarting server"
+	perform playlist list name "$PLAYLIST1"
+	expect 0 "120.*unrated"
+	expect 1 "120.*good"
+	expect 0 "120.*neutral"
+	expect 0 "120.*bad"
+	perform playlist list name "$PLAYLIST2"
+	expect 0 "120.*unrated"
+	expect 0 "120.*good"
+	expect 0 "120.*neutral"
+	expect 1 "120.*bad"
+
+	perform playlist list
+	expect 0 "120.*unrated"
+	expect 1 "120.*good"
+	expect 0 "120.*neutral"
+	expect 1 "120.*bad"
+
+	# Test other predicate forms
+	piano RATE PLAYLIST NEUTRAL LIKE "Soothing clocks" ||
+		fail "Could not rate with LIKE predicate"
+	perform playlist list name "$PLAYLIST1"
+	expect 0 "120.*unrated"
+	expect 0 "120.*good"
+	expect 1 "120.*neutral"
+	expect 0 "120.*bad"
+	perform playlist list name "$PLAYLIST2"
+	expect 0 "120.*unrated"
+	expect 0 "120.*good"
+	expect 0 "120.*neutral"
+	expect 1 "120.*bad"
+
+	piano 'RATE PLAYLIST GOOD WHERE PLAYLIST = "Sooth*" && PLAYLIST =~ "Sounds"' ||
+		fail "Could not rate with WHERE predicate"
+	perform playlist list name "$PLAYLIST1"
+	expect 0 "120.*unrated"
+	expect 1 "120.*good"
+	expect 0 "120.*neutral"
+	expect 0 "120.*bad"
+	perform playlist list name "$PLAYLIST2"
+	expect 0 "120.*unrated"
+	expect 0 "120.*good"
+	expect 0 "120.*neutral"
+	expect 1 "120.*bad"
+}
+
+function test_core_requests
+{
+	require tonegenerator || return
+	as_user user
+
+	perform QUEUE LIST
+	expect 0 "111 .*"
+
+	# Test inside wildcard while we're at it
+	piano "REQUEST WHERE artist = 'AT&T*'" ||
+		fail "Could not request AT&T songs"
+	perform QUEUE LIST
+	expect 8 "111 .*"
+
+	piano REQUEST song LIKE 'Westminster' ||
+		fail "Could not request Westminster chimes"
+	perform QUEUE LIST
+	expect 12 "111 .*"
+
+	# And test the outside wildcard too
+	piano "REQUEST CANCEL WHERE artist = 'AT&T'*" ||
+		fail "Could not cancel AT&T songs"
+	perform QUEUE LIST
+	expect 4 "111 .*"
+
+	perform request clear
+	perform QUEUE LIST
+	expect 0 "111 .*"
+}
+
+
+function test_core_song_ratings
+{
+	require tonegenerator || return
+	as_user user 
+
+	# Test different predicate forms
+	piano 'RATE SONG GOOD WHERE TITLE="Reorder*"' ||
+		fail "Could not rate reorder good."
+	piano RATE SONG BAD LIKE "1KHz" ||
+		fail "Could not rate 1khz tone bad."
+	piano RATE SONG OVERPLAYED NAME "Dial Tone" ||
+		fail "Could not rate dialtone overplayed."
+	typeset id
+	id=$(piano -c SONG LIST NAME "Dial Tone" | grep '^111 ' | awk '{print $NF}')
+	if [ "$id" = "" ]
+	then
+		fail "Could not get ID for Dial Tone"
+	else
+		piano RATE SONG NEUTRAL ID $id
+	fi
+
+	# Check all the numeric ratings work
+	for rating in 0.5 1 1.5 2 2.5 3.0 3.5 4.0 4.5 5.0
+	do
+		piano RATE SONG $rating NAME "Dial Tone"
+		perform SONG LIST NAME "Dial Tone"
+		expect 1 "116 .*: [a-z][a-z]* $rating"
+	done
+
+	# Test multiple item predicate and filtering for ratings
+	piano "SONG LIST WHERE TYPE != PLAYLIST && USER = 3.0" &&
+		fail "There were already songs rated neutral"
+
+	piano "RATE SONG NEUTRAL WHERE TYPE = SONG && ARTIST =~ 'AT&T'" ||
+		fail "Could not rate all AT&T songs."
+
+	perform "SONG LIST WHERE USER = NEUTRAL"
+	expect 8 "116 .*: neutral 3.0"
+	
+	perform "SONG LIST WHERE USER == UNRATED"
+	expect 7 "116 .*: unrated .*"
+	
+	piano "RATE SONG GOOD WHERE TYPE != PLAYLIST && PLAYLIST =~ 'soothing'" ||
+		fail "Could not rate songs in soothing sounds of clocks."
+	perform "SONG LIST WHERE USER == RATED"
+	expect 13 "116 .*: [a-z][a-z]* [0-5].*"
+
+	perform "SONG LIST WHERE USER == UNRATED"
+	expect 3 "116 .*: unrated .*"
+}
+
+function test_core_seed_management
+{
+	require tonegenerator || return
+	as_user admin
+
+# "seed" SEEDVERB OPTIONALTYPE [ SINGLE_PREDICATE ] [ SEEDPREP" playlist" LIST_PLAYLIST ]
+# "playlist modify" SINGLE_PLAYLIST SEEDVERB " seed" LIST_PREDICATE },
+# seed list" [ "playlist" LIST_PLAYLIST ]
+
+	piano 'WITH SOURCE ID 2 PLAYLIST CREATE NAME "Murray Hill Smart Sounds" WHERE "AT&T"' ||
+		fail "Murray Hill creation not okay"
+	perform 'SEED LIST PLAYLIST LIKE "Murray"'
+	expect 0 "111 .*:"
+
+	piano 'SEED ADD LIKE "1KHz" TO PLAYLIST WHERE "Murray Hill"'
+	perform 'SEED LIST PLAYLIST LIKE "Murray"'
+	expect 1 "111 .*:"
+
+	piano 'WITH SOURCE ID 2 PLAYLIST CREATE NAME "Murray Hill Dumb" FROM WHERE TYPE = song && PLAYLIST == "Murray*"'
+	perform 'SEED LIST PLAYLIST NAME "Murray Hill Dumb"'
+	expect 9 "111 .*:"
+
+	piano 'SEED ADD LIKE "intergalactic distress" TO PLAYLIST WHERE "Murray Hill"'
+	perform 'SEED LIST PLAYLIST LIKE "Murray Smart"'
+	expect 2 "111 .*:"
+	perform 'SEED LIST PLAYLIST NAME "Murray Hill Dumb"'
+	expect 10 "111 .*:"
+
+	piano 'SEED DELETE LIKE "1KHz" FROM PLAYLIST WHERE "Murray Hill"'
+	perform 'SEED LIST PLAYLIST LIKE "Murray Smart"'
+	expect 1 "111 .*:"
+	perform 'SEED LIST PLAYLIST NAME "Murray Hill Dumb"'
+	expect 9 "111 .*:"
+
+	piano 'PLAYLIST MODIFY LIKE "Murray Hill" TOGGLE SEED LIKE "emergency broadcast" "1KHz"'
+	perform 'SEED LIST PLAYLIST LIKE "Murray Smart"'
+	expect 3 "111 .*:"
+	perform 'SEED LIST PLAYLIST NAME "Murray Hill Dumb"'
+	expect 11 "111 .*:"
+}
+
+function test_tonegenerator
+{
+	require tonegenerator || return
+	# Requirement check creates first tone generator, source #2
+
+	piano tonegenerator activate name nope &&
+		fail "Created done generator as visitor"
+
+	as_user user
+	perform source list enabled || fail "Cannot get source list"
+	expect 2 "111 .*"
+	piano tonegenerator activate name nope &&
+		fail "Created done generator as user without service privilege"
+
+	do_admin grant service to user
+	# Source #3 create:
+	piano tonegenerator activate name ace ||
+		fail "Could not create tone generator (source #3)"
+
+	as_user user
+	# Source #4 create:
+	piano tonegenerator activate name fourth ||
+		fail "Could not create tone generator (source #4)"
+	# Source #5 create:
+	piano tonegenerator activate name fourth wait &&
+		fail "Created two tone generators with same name."
+	piano source disconnect id 2 ||
+		fail "Could not delete source #2"
+	piano play request ||
+		fail "Could not select request mode."
+	piano request where "Hourly Westminster" ||
+		fail "Could not queue request #1."
+	piano request like "AT&T busy" ||
+		fail "Could not queue request #2."
+	piano source disconnect type tonegenerator name ace  ||
+		fail "Could not delete source #3"
+	piano source disconnect type tonegenerator name fourth ||
+		fail "Could not delete source #4"
+	piano source disconnect id 5 &&
+		fail "Able to delete nonexistent source #5"
+
+	if $TEST_OK
+	then
+		piano wait for end of current song timeout 30 ||
+			fail "Wait for end of song failed."
+		# Give daemon time to finish deleting the source
+		sleep 3
+	fi
+
+	perform source list enabled
+	expect 1 "111 .*"
+}
+
+function test_playlist_predicates {
+	require tonegenerator || return
+	as_user admin
+
+	# Soothing Sounds of Moog-like Clocks is created by the source
+	# Add some other playlists
+	piano 'WITH SOURCE ID 2 PLAYLIST CREATE NAME "Murray Hill Sounds" WHERE "AT&T"' ||
+		fail "Murray Hill creation not okay"
+	piano 'WITH SOURCE ID 2 PLAYLIST CREATE NAME "Test Tones" WHERE "Reorder" || "1KHz" || "440"' ||
+		fail "Test Tones creation not okay"
+
+	# Check expected playlists exist
+	perform PLAYLIST LIST
+	expect 3 "111 .*"
+
+	perform PLAYLIST LIST LIKE 'sounds'
+	expect 2 "111 .*"
+
+	perform 'PLAYLIST LIST WHERE "Tones"'
+	expect 1 "111 .*"
+
+	piano PLAYLIST LIST NAME "Murray Hill" &&
+		fail "Listing nonexistent playlist 'Murray Hill' succeeded."
+
+	grouping Check playlist population
+	perform PLAYLIST SONG LIST NAME "Murray Hill Sounds"
+	expect 8 "111 .*"
+	perform PLAYLIST SONG LIST LIKE "soothing clocks"
+	expect 4 "111 .*"
+	perform 'PLAYLIST SONG LIST WHERE PLAYLIST = "Test*"'
+	expect 3 "111 .*"
+
+	grouping Checking that single-item predicates are caught
+	piano playlist rename like "Sounds" to "This Should Fail" &&
+		fail "Rename succeeded with ambiguous expression (multiple matches on predicate)"
+
+	grouping Check mix set, add, remove and toggle
+	piano MIX SET LIKE "Sounds" || fail "Could not MIX SET"
+	perform MIX LIST INCLUDED
+	expect 1 "115 .*Soothing.*Sounds"
+	expect 1 "115 .*Murray Hill Sounds"
+	expect 0 "115 .* Test Tones"
+	perform MIX LIST EXCLUDED
+	expect 0 "115 .*Soothing.*Sounds"
+	expect 0 "115 .*Murray Hill Sounds"
+	expect 1 "115 .* Test Tones"
+	
+	piano MIX TOGGLE LIKE "soothing Sounds" || fail "Could not MIX TOGGLE"
+	perform MIX LIST INCLUDED
+	expect 1 "115 .*Murray Hill Sounds"
+	perform MIX LIST EXCLUDED
+	expect 1 "115 .*Soothing.*Sounds"
+	expect 1 "115 .* Test Tones"
+	
+	piano MIX ADD NAME "Test Tones"
+	perform MIX LIST INCLUDED
+	expect 1 "115 .*Murray Hill Sounds"
+	expect 1 "115 .*Test Tones"
+	perform MIX LIST EXCLUDED
+	expect 1 "115 .*Soothing.*Sounds"
+
+	piano MIX TOGGLE LIKE "soothing Sounds"
+	perform MIX LIST INCLUDED
+	expect 1 "115 .*Murray Hill Sounds"
+	expect 1 "115 .* Test Tones"
+	expect 1 "115 .*Soothing.*Sounds"
+	perform MIX LIST EXCLUDED
+	expect 0 "111 .*"
+
+	piano "MIX REMOVE WHERE PLAYLIST = 'Test*' || PLAYLIST = 'Soothing*'"
+	perform MIX LIST INCLUDED
+	expect 1 "115 .*Murray Hill Sounds"
+	perform MIX LIST EXCLUDED
+	expect 1 "115 .* Test Tones"
+	expect 1 "115 .*Soothing.*Sounds"
+	
+	
+
+	# Delete some playlists
+	piano playlist delete like "sounds" ||
+		fail "Delete failed for sounds playlists"
+	perform PLAYLIST LIST
+	expect 1 "111 .*"
+}
+
+function check_source_config {
+	if [[ "$1" == "-n" ]]
+	then
+		# Numeric search pattern
+		typeset search="\"$2\":$3"
+		shift
+	else
+		# String search pattern
+		typeset search="\"$1\":\"$2\""
+	fi
+	typeset expected="${3:-1}"
+	typeset file="$TESTDATA/pianod2/passwd.json"
+	typeset grep="grep -c"
+	typeset count=0
+	typeset reader="cat"
+	
+	if ! piano sync
+	then
+		fail "Could not synchronize"
+	elif [ -f "$file" ]
+	then
+		count=$(fgrep -c "$search" "$file")
+	elif [ -f "$file.gz" ]
+	then
+		file="$file.gz"
+		reader="gunzip -c"
+		count=$(gunzip -c "$file" | fgrep -c "$search")
+	else
+		fail "Password persistence file not found."
+	fi
+	if [ $count -ne $expected ]
+	then
+		fail "Found wrong number of configuration items in persistence file."
+		print -- "Pattern: '$*'"
+		print "Expected $expected, found $count."
+		if [ -f "$file" ]
+		then
+			print -- "Config file portion follows:"
+			eval "$reader '$file'" | fgrep "\"$1\":" | sed 's/^[ 	]*/	/'
+		fi
+	else
+		success "Configuration okay ($count=$expected): '$1/$2'"
+	fi
+		
+}
+function reconfigure_with {
+	piano source disconnect id $TONEGEN_NUMBER ||
+		fail "Could not delete tone generator $TONEGEN_NUMBER"
+	if piano tonegenerator use $PIANOD_USER remember wait $*
+	then
+		let TONEGEN_NUMBER++
+		grouping "Successfully reconfigured for $*"
+	else
+		fail "Could not reconfigure with $*"
+	fi
+}
+
+function test_source_parameters
+{
+	require tonegenerator:remember || return
+	TONEGEN_NUMBER=2
+
+	as_user admin
+	check_source_config accessMode published
+	check_source_config rescan never
+	check_source_config -n recentBias 1
+	check_source_config -n ratingBias 1
+	check_source_config songProxy none
+	
+	reconfigure_with recent bias 50
+	check_source_config accessMode published
+	check_source_config rescan never
+	check_source_config -n recentBias 50
+	check_source_config -n ratingBias 1
+	check_source_config songProxy none
+
+	reconfigure_with rating bias 42
+	check_source_config accessMode published
+	check_source_config rescan never
+	check_source_config -n recentBias 50
+	check_source_config -n ratingBias 42
+	check_source_config songProxy none
+
+	reconfigure_with rating bias 37 recent bias 77 song proxy donor
+	check_source_config accessMode published
+	check_source_config rescan never
+	check_source_config -n recentBias 77
+	check_source_config -n ratingBias 37
+	check_source_config songProxy donor
+
+	reconfigure_with song proxy recipient
+	check_source_config accessMode published
+	check_source_config rescan never
+	check_source_config -n recentBias 77
+	check_source_config -n ratingBias 37
+	check_source_config songProxy recipient
+
+	reconfigure_with rating bias 1 recent bias 1
+	check_source_config accessMode published
+	check_source_config rescan never
+	check_source_config -n recentBias 1
+	check_source_config -n ratingBias 1
+	check_source_config songProxy recipient
+
+	reconfigure_with song proxy none private
+	check_source_config accessMode private
+	check_source_config rescan never
+	check_source_config -n recentBias 1
+	check_source_config -n ratingBias 1
+	check_source_config songProxy none
+
+	reconfigure_with shared
+	check_source_config accessMode shared
+
+	reconfigure_with public
+	check_source_config accessMode public
+
+	piano delete source id $TONEGEN_NUMBER
+	piano tonegenerator activate remember wait rescan always &&
+		fail "Able to create a tone generator with rescan option."
+}
+
+function test_filesystem_playback
+{
+	require filesystem || return
+
+	as_user user
+	perform source list enabled || fail "Cannot get source list"
+	expect 2 "111 .*"
+	piano play request ||
+		fail "Could not select request mode."
+	perform "song list where title = cookies" ||
+		fail "Could not list test title."
+	expect 1 "114.*Cookies"
+	piano "request where title = cookies" ||
+		fail "Could not request test title."
+	piano wait for end of current song timeout 30 ||
+		fail "Failed waiting for end of track."
+	# Make sure the daemon is still sane
+	perform source list enabled || fail "Cannot get source list"
+	expect 2 "111 .*"
+}
+
+function test_filesystem_persistence
+{
+	require filesystem:remember || return
+
+	as_user admin
+	grouping "Configuring to test REMEMBER source parameters."
+	piano "WITH SOURCE ID 2 PLAYLIST CREATE NAME full WHERE TITLE = cookies" ||
+		fail "Could not create full playlist."
+	piano "WITH SOURCE ID 2 PLAYLIST CREATE NAME empty WHERE TITLE = bakayaro" ||
+		fail "Could not create empty playlist."
+
+	# Check to make sure playlists populated correctly
+	perform playlist song list name full
+	expect 1 "114.*Cookies"
+	perform playlist song list name empty
+	expect 0 "114"
+
+	grouping "Restarting to test REMEMBER source parameters."
+	shutdown_pianod
+	piano yell "This is a test" && fail "Able to yell after shutting down server."
+	restart_pianod
+	require filesystem:restore playlist:empty playlist:full ||
+		fail "Requirements not available after restart"
+	SKIP_TEST=false
+
+	# Recheck playlist contents
+	perform playlist song list name full
+	expect 1 "114.*Cookies"
+	perform playlist song list name empty
+	expect 0 "114"
+	perform source list enabled || fail "Cannot get source list"
+	expect 2 "111 .*"
+
+	# Unload the source and reconfigure it with automatic restoration
+	grouping "Configuring to test RESTORE source parameters."
+	piano source disconnect id 2 || fail "Could not delete source #2"
+	piano filesystem use admin restore wait ||
+		fail "Could not reconfigure for restore"
+	
+	# Recheck playlist contents
+	perform playlist song list name full
+	expect 1 "114.*Cookies"
+	perform playlist song list name empty
+	expect 0 "114"
+	perform source list enabled || fail "Cannot get source list"
+	expect 2 "111 .*"
+
+	grouping "Restarting to test RESTORE source parameters."
+	shutdown_pianod
+	piano yell "This is a test" && fail "Able to yell after shutting down server."
+	restart_pianod
+	piano wait for source all pending ready timeout 30
+	require playlist:empty playlist:full ||
+		fail "Requirements not available after restart"
+	SKIP_TEST=false
+
+	# Recheck playlist contents
+	perform playlist song list name full
+	expect 1 "114.*Cookies"
+	perform playlist song list name empty
+	expect 0 "114"
+	perform source list enabled || fail "Cannot get source list"
+	expect 2 "111 .*"
+}
+
+function test_autotuning {
+	require tonegenerator
+	do_admin autotune mode all || fail "Could not select autotuning mode."
+	as_user user
+	perform autotune mode
+	expect 1 '144 .* login'
+	expect 1 '144 .* flag'
+
+	do_admin autotune mode login || fail "Could not select autotuning mode."
+	perform autotune mode
+	expect 1 '144 .* login'
+	expect 0 '144 .* flag'
+
+	do_admin autotune mode flag || fail "Could not select autotuning mode."
+	perform autotune mode
+	expect 0 '144 .* login'
+	expect 1 '144 .* flag'
+
+	as_user admin
+	piano GRANT influence TO user listener admin || fail "Could not grant influence"
+	perform users list
+	piano 'WITH SOURCE ID 2 PLAYLIST CREATE NAME "Telephony" where "AT&T"' || fail "Could not create playlist Telephony"
+	piano 'WITH SOURCE ID 2 PLAYLIST CREATE NAME "Science Fiction" where "Galactic"' || fail "Could not create playlist Science Fiction"
+	piano 'WITH SOURCE ID 2 PLAYLIST CREATE NAME "Annoying" where "Galactic" | "Emergency" | "1KHz"'  || fail "Could not create playlist Annoying"
+
+	as_user user
+	piano select auto || fail "Could not switch to autotuning playlist."
+	piano rate playlist okay name "Science Fiction" || fail "Could not rate station Science Fiction"
+	piano rate playlist bad name "Annoying" || fail "Could not rate station Annoying"
+
+	as_user listener
+	piano rate playlist bad name "Annoying" || fail "Could not rate station Annoying"
+	piano rate playlist good like "Soothing Clocks" || fail "Could not rate station Soothing Clocks"
+
+	grouping Test "autotune for"...
+	do_admin autotune mode flag quantity goal 0
+	do_admin autotune for user
+	perform mix list included
+	expect 0 "115 "
+	expect 0 "115.*Telephony\$"
+	expect 0 "115.*Science Fiction\$"
+	expect 0 "115.*Annoying\$"
+	expect 0 "115.*Soothing.*Clocks\$"
+
+	do_admin autotune mode include okay
+	perform mix list included
+	expect 1 "115 "
+	expect 0 "115.*Telephony\$"
+	expect 1 "115.*Science Fiction\$"
+	expect 0 "115.*Annoying\$"
+	expect 0 "115.*Soothing.*Clocks\$"
+	
+	do_admin autotune for user listener
+	perform mix list included
+	expect 2 "115 "
+	expect 0 "115.*Telephony\$"
+	expect 1 "115.*Science Fiction\$"
+	expect 0 "115.*Annoying\$"
+	expect 1 "115.*Soothing.*Clocks\$"
+	
+	do_admin autotune mode include good
+	perform mix list included
+	expect 1 "115 "
+	expect 0 "115.*Telephony\$"
+	expect 0 "115.*Science Fiction\$"
+	expect 0 "115.*Annoying\$"
+	expect 1 "115.*Soothing.*Clocks\$"
+	
+	do_admin autotune for listener
+	perform mix list included
+	expect 1 "115 "
+	expect 0 "115.*Telephony\$"
+	expect 0 "115.*Science Fiction\$"
+	expect 0 "115.*Annoying\$"
+	expect 1 "115.*Soothing.*Clocks\$"
+	
+	grouping Test "autotune consider"
+	do_admin autotune consider user admin
+	perform mix list included
+	expect 1 "115 "
+	expect 0 "115.*Telephony\$"
+	expect 0 "115.*Science Fiction\$"
+	expect 0 "115.*Annoying\$"
+	expect 1 "115.*Soothing.*Clocks\$"
+	
+	as_user listener
+	piano rate playlist superb name "Science Fiction" || fail "User could not rate station Science Fiction"
+	perform mix list included
+	expect 2 "115 "
+	expect 0 "115.*Telephony\$"
+	expect 1 "115.*Science Fiction\$"
+	expect 0 "115.*Annoying\$"
+	expect 1 "115.*Soothing.*Clocks\$"
+	
+	grouping Test "autotune disregard"...
+	do_admin autotune disregard listener
+	perform mix list included
+	expect 0 "115 "
+	expect 0 "115.*Telephony\$"
+	expect 0 "115.*Science Fiction\$"
+	expect 0 "115.*Annoying\$"
+	expect 0 "115.*Soothing.*Clocks\$"
+	
+	grouping Test the influence flag
+	do_admin autotune consider user listener
+	perform mix list included
+	expect 2 "115 "
+
+	do_admin revoke influence from listener
+	perform mix list included
+	expect 0 "115 "
+	expect 0 "115.*Telephony\$"
+	expect 0 "115.*Science Fiction\$"
+	expect 0 "115.*Annoying\$"
+	expect 0 "115.*Soothing.*Clocks\$"
+}
+
+
+function test_json_requests
+{
+	as_user user
+	perform '{"getSchema": {}}' || fail "Cannot request schema list"
+	expect 1 "132.* alterSeeds"
+	perform '{"getSchema": {"request":["alterSeeds"]}}' || fail "Cannot request alterSeeds schema"
+	expect 1 "predicate.*optional"
+
+	grouping Error handling
+	piano '{"getSchema": {"badname":["alterSeeds"]}}' && fail "Invalid schema request succeeded"
+	piano '{"bakayaro": {}}' && fail "Invalid schema request succeeded"
+	piano '{}' && fail "Empty request succeeded"
+	piano '{"pause":{},"resume":{}}' && fail "Ambiguous request succeeded"
+
+	if ! require filesystem
+	then
+		SKIP_TEST=false
+		return
+	fi
+
+	grouping Testing source control commands
+	as_user user
+	perform '{"getSourcesEnabled":{}}' || fail "Cannot get source list"
+	expect 2 "111 .*"
+	piano play request ||
+		fail "Could not select request mode."
+	perform '{"getTracks":{"predicate":{"manner":"where","expression":"title = cookies"}}}' ||
+		fail "Could not list test title."
+	expect 1 "114.*Cookies"
+	piano '{"request":{"predicate":{"manner":"where","expression":"title=cookies"}}}' ||
+		fail "Could not request test title."
+	piano '{"waitForEndOfTrack": {"which": "current","waitOptions":{"duration":30}}}' ||
+		fail "Failed waiting for end of track."
+
+	grouping Testing withSource and inRoom options
+	# piano(1) helpfully adds surrounding user/password stuff, making this invalid
+	piano '{"inRoom":{"room":"pianod"},"getTracks":{"predicate":{"manner":"where","expression":"title = cookies"}}}' &&
+		fail "inRoom worked when not in outermost dictionary."
+
+	unset PIANOD_USER PIANOD_PASSWORD
+	perform '{"asUser":{"username":"user","password":"user"},"withSource":{"source":{"type":"filesystem","name":"admin"}},"getTracks":{"predicate":{"manner":"where","expression":"title = cookies"}}}' ||
+		fail "Could not list test title."
+	expect 1 "114.*Cookies"
+
+	perform '{"asUser":{"username":"user","password":"user"},"inRoom":{"room":"pianod"},"getTracks":{"predicate":{"manner":"where","expression":"title = cookies"}}}' ||
+		fail "Could not list test title."
+	expect 1 "114.*Cookies"
+
+	piano '{"asUser":{"username":"user","password":"user"},"inRoom":{"room":"pianod","request":{"getSchema":{}}},"getTracks":{"predicate":{"manner":"where","expression":"title = cookies"}}}' &&
+		fail "Completed inRoom with conflicting requests."
+
+
+	# Make sure the daemon is still sane
+	as_user user
+	perform '{"getSourcesEnabled":{}}' || fail "Cannot get source list"
+	expect 2 "111 .*"
+}
+
+
+
+function test_tls {
+	# Check if there's a TLS client available
+	typeset connect port=$((PIANOD_PORT + 2)) tls tlscount=0
+	print -n "Looking for TLS client: "
+	if whence -p gnutls-cli
+	then
+		connect="gnutls-cli -p $port --insecure localhost"
+	elif whence -p openssl
+	then
+		connect="openssl s_client -quiet -connect localhost:$port"
+	else
+		print "No TLS client utility to test with."
+		require fail
+		return
+	fi
+
+	if [ ! -f config.h ]
+	then
+		print "config.h: File not found; needed to assess configuration."
+		require fail
+		return
+	fi
+
+	# Check whether we have a TLS package we can work with.
+	# OS X's SecureTransport requires additional setup, so we don't test it.
+	for tls in LIBGNUTLS LIBMBEDTLS LIBTLS LIBSSL
+	do
+		grep -q -w $"^#define[ \t][ \t]*HAVE_$tls" config.h &&
+			let tlscount++
+	done
+
+	if [ $tlscount -eq 0 ]
+	then
+		print "TLS is not configured."
+		require fail
+		return
+	fi
+
+	[ $tlscount -gt 1 ] && warning "Found $tlscount TLS libraries configured, expected 0 or 1."
+
+
+	cat > ${CONFIGDIR}/x509-server.pem << EOF
+-----BEGIN CERTIFICATE-----
+MIIFkTCCA3mgAwIBAgIJAPaXq4ZewIVVMA0GCSqGSIb3DQEBCwUAMF8xCzAJBgNV
+BAYTAlVTMQswCQYDVQQIDAJOWTERMA8GA1UEBwwIVGFoYXdhdXMxFjAUBgNVBAoM
+DVRlc3RlcnMsIEluYy4xGDAWBgNVBAsMD1VuaXQgVGVzdCBEZXB0LjAeFw0xODAy
+MDgyMzI0MzVaFw0xODAzMTAyMzI0MzVaMF8xCzAJBgNVBAYTAlVTMQswCQYDVQQI
+DAJOWTERMA8GA1UEBwwIVGFoYXdhdXMxFjAUBgNVBAoMDVRlc3RlcnMsIEluYy4x
+GDAWBgNVBAsMD1VuaXQgVGVzdCBEZXB0LjCCAiIwDQYJKoZIhvcNAQEBBQADggIP
+ADCCAgoCggIBALV/fB3nrmcyOc8PUCYhlp/ITE4qsMQdMuTUnbnqNxXbPCQ1scQ0
+S4jEjGE3jJp16kSTM1wnNXJd7JOndpJMikVIivHKlxfdcrTZbH+bRMwwqEauNoWl
+xKDBo6RV0V/6h/DkQPtBf/00x92wtBw0s7VhWe6002O1PxKI4nW+ZYyLZ0Ik0gMc
+Rar93SqC99KhwiusNkjks9owplxtKpASy9HUxFz8mjrLJi+xhPV5jqZkGnJqdIxw
+41Jmj7sAerOY9Ci7q/kRcMSbAhuT9W+keusMpXNtToDuC2Db9lsCPYlfUSe2M0Dl
+mXs9hPQ5Owp0rQYQAKatAfIanprrgWJJGilDIKQV0l5lEtmTS45Vh898G0kXqd6J
+FCP7FbVILWmZJkjCUKVmR2NpjEES3+hWL2/jlWpMAmFGbcAlZ7hNMVkWARthliB7
+Sw1SNCq3UXpkW1nA9i8gDE/3PHn9CGkob5GZkAft3NRiQDZf74Y2tv0SkZNaIZZm
+4wzhhygLlg1oBP4Dh76nJBm1q335tqUZSRPOf1ZXM+V4fbqD2Bl4llQIXPEO7OT3
+j0h9nxVpR/eeXLHRT3G9fGjQ3qFIi40el0qvurQK4jkDHItZpVEaq82kmkb+sTHT
+qbL/7+dq2dSlFIKQBcBKZGXh2fhbd3gSWGNJnxt/5OTiaKLBCfar0PgdAgMBAAGj
+UDBOMB0GA1UdDgQWBBROdOaXbn0yFoKkWSNhER7eE548LzAfBgNVHSMEGDAWgBRO
+dOaXbn0yFoKkWSNhER7eE548LzAMBgNVHRMEBTADAQH/MA0GCSqGSIb3DQEBCwUA
+A4ICAQBHQTZNK0+yW8TtCwcTdHi4vfEv6T0zUoSbyMClaXl4f1FMYxbw7e+twyyZ
+V8TNAJ6VMzYYJcmaNE5GGE2GhkSaEDkanGPWkMm8DXiv9kyadPjeVPF0xV/U8Phf
+rac8escjRon5ky/JTUIhA5HtKgKN5YR4akk1HPNkuoxHp72Sp58qDs1grB9Ev7PF
+G2u396BByvbjVdC98U11ts4CsjLlGE7orrt58DdVMyCsIWowP+rL/b1EZKzHzecL
+I3e7Zmmk9yjK6NqIkl9s73m2yruWt3ZlJLdVYGdfZr5NZOH7PBR2iDP7mbFMjm8G
+aAbWplwJ7QEJd0gvE3GQp2toB8f2q3BZI/nWTYA7yEzu95EReRZwfgQW6sKaErlW
+uuUOOyRyZEHwP4HewfckWfrtQ/4CeGjjQjNyISmLnon1wyUgLn+z20q2qzCV5fbV
+vbMkb0xYM61zOvlkk/3dnqMmpZZG+0J3JQrFJmxIe6F+OXrhiuWS3mGIOA7ghnMf
+aIlWkrcdfUzF3iPmRQ7bzFcwKyT3MvSD6W3iKZ4eV2wDzM9w6PjIPzY12XK2By4B
+gI2fMe+M1PRc7zMe/rMGxaByzhQ/8vwiBvJ7wlmBi77hBVX9kQbRlN+J1crV1tiL
+QqAshhop7GhZ9tfFGN/xHfZIyikijpAoPT1WFah4tLeMZP45YQ==
+-----END CERTIFICATE-----
+EOF
+	cat > ${CONFIGDIR}/x509-server-key.pem << EOF
+-----BEGIN RSA PRIVATE KEY-----
+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
+-----END RSA PRIVATE KEY-----
+EOF
+	shutdown_pianod
+
+	grouping "Testing HTTPS port."
+	print "Connecting with: $connect"
+	restart_pianod
+	typeset tempfile=$(mktemp /var/tmp/$arg0.tlsoutput.XXXXXX)
+	(print $'HELO\nQUIT'; sleep 5) | $connect > "$tempfile"
+	if ! grep -q 'Welcome!' "$tempfile"
+	then
+		fail "Did not observe welcome message."
+		sed 's/^/	/' "$tempfile"
+	fi
+	rm "$tempfile"
+}
+
+function test_web_server {
+	typeset tempfile="${TESTDATA}/retrieved.$$.html"
+	require curl || return
+	
+	grouping Basic http function
+	# Check we can get the default version of the page
+	if curl --silent --output "$tempfile" "http://${PIANOD_HOST}:$((PIANOD_PORT + 1))/pianod/"
+	then
+		if cmp -s "$tempfile" "$HTML/index.html"
+		then
+			success "index.html retrieved ok"
+		else
+			fail "HTTP request for index.html returned wrong page."
+		fi
+	else
+		fail "HTTP request for index.html failed"
+	fi
+
+	grouping Language handling
+	# Check server handles ordering of languages correctly
+	while read name file language
+	do
+		[ "$name" = "#" -o "$name" = "" ] && continue
+		if curl --silent --output "$tempfile" -H "Accept-Language: $language" "http://${PIANOD_HOST}:$((PIANOD_PORT + 1))/pianod/"
+		then
+			if cmp -s "$tempfile" "$HTML/$file"
+			then
+				success "Request for $name successful"
+			else
+				fail "Response not the expected $name document:"
+				diff "$HTML/$file" "$tempfile" | head -15 | sed $'s/^/\t/'
+			fi
+		else
+			fail "HTTP request (multi lingual, $name) failed."
+		fi
+	done << EOF
+# First, check we can get a foreign page
+German locale/index.html.de de;q=0.5
+
+# Check we can get both localized and generic versions
+English-American locale/index.html.en_us en-US;q=0.6, de;q=0.4, es;q=0.2
+English-Generic locale/index.html.en_us en;q=0.6, de;q=0.4, es;q=0.2
+
+# Check the language rankings are respected.
+Spanish locale/index.html.es en;q=0.2, de;q=0.4, es;q=0.8
+French locale/index.html.fr en;q=0.2, fr;q=0.7, es;q=0.1
+EOF
+
+	rm -f "$tempfile"
+}
+
+if $USAGE
+then
+	print -- "$arg0: Usage: $arg0 [-v] [-b] [test] ..."
+	print "  -v : verbose; always display pianod session output."
+	print "  -b : break on failed test, and leave intermediate files."
+	print "  -l : list tests"
+fi
+
+if $USAGE || $LISTTESTS
+then
+	print "Tests available:"
+	functions | grep '^function test' | awk '{print $2}' | sed 's/^test_/	/'
+	$USAGE && exit 1
+	exit 0
+fi
+
+if [ $# -gt 0 ]
+then
+	for item in "$@"
+	do
+		test_list="$test_list test_$item"
+	done
+else
+	test_list=$(functions | grep '^function test' | awk '{print $2}')
+fi
+
+print -- "=========================================================="
+grouping "pianod test report"
+print -- "=========================================================="
+print -- "Performed: $(date)"
+print -- "On: $(uname -a)"
+print -- "Executable: $PIANOD"
+print -- "daemon identifies itself as:"
+${PIANOD} -vvv 2>&1 | sed 's/^/      /g'
+print
+
+failed_tests=""
+skipped_tests=""
+for TEST_ID in $test_list
+do
+	print -- "=========================================================="
+	grouping "Start of test ${TEST_ID#test_}"
+	print -- "=========================================================="
+	if ! functions "$TEST_ID" >/dev/null
+	then
+		failed_tests="$failed_tests ${TEST_ID#test_}"
+		failure "TEST NOT FOUND!"
+		continue
+	fi
+	start_pianod
+	eval "$TEST_ID"
+	shutdown_pianod
+	if $SKIP_TEST
+	then
+		skipped_tests="$skipped_tests ${TEST_ID#test_}"
+	elif $TEST_OK
+	then
+		success "Test passed."
+	else
+		failed_tests="$failed_tests ${TEST_ID#test_}"
+		failure -h "TEST FAILED!"
+		$BREAKONFAIL && exit 1
+	fi
+	print; print; print
+done
+
+print -- "=========================================================="
+grouping "Test Summary"
+print -- "=========================================================="
+print
+
+if [ "$skipped_tests" != "" ]
+then
+	print "The following tests were skipped:"
+	for test_id in $skipped_tests
+	do
+		print -- "\t${test_id}"
+	done
+fi
+
+if [ "$failed_tests" = "" ]
+then
+	[ $# -gt 0 ] && success -h "Requested tests passed."
+	[ $# -eq 0 ] && success -h "All tests passed."
+	rm -rf "${TESTDATA}"
+	exit 0
+else
+	print "The following tests failed:"
+	for test_id in $failed_tests
+	do
+		print -- "\t${test_id}"
+	done
+	exit 1
+fi
+

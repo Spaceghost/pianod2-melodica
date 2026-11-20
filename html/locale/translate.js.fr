@@ -1,0 +1,256 @@
+/* pianod web client - internationalization/translation support
+   Copr. 2015-2017 Perette Barella/Devious Fish
+   All rights reserved.
+*/
+
+
+
+
+var Translate = function () {
+	function Translate () {
+		/* Nothing */
+	};
+
+	/* Constants */
+	var ERRORS = {
+
+
+		200: "Succès",
+		203: "Début de données",
+		204: "Pas de données ou la fin des données",
+		206: "Match trouvé",
+		207: "Valeur a été approchée",
+		210: "Commande reconnu mais l'action est en suspens",
+		300: "Détail",
+		301: "Réglages proxy invalide",
+		303: "Playlist non valide",
+		304: "Article pas trouvé",
+		400: "Bad commande",
+		401: "Non autorisé pour action demandée",
+		402: "Action a échoué",
+		403: "Existe déjà",
+		404: "Article demandé est introuvable",
+		405: "Action est pas applicable à l'état actuel",
+		406: "Login ou mot de passe invalide",
+		407: "Paramètre non valide",
+		408: "Playlist personnalisation échoué",
+		409: "Conflits rencontré",
+		410: "Panne temporaire, l'achèvement avenir inconnu",
+		411: "Le quota est dépassé",
+		412: "Devez être connecté",
+		413: "Non pris en charge",
+		414: "Ressources insuffisantes",
+		415: "Limite a été atteint",
+		416: "Opération uniquement valable sur les playlists primaires",
+		417: "Mauvais type d'action",
+		418: "Expression persistante ou valeur requise",
+		460: "Action pas pris en charge par la source",
+		461: "Valeur est pas pris en charge par la source",
+		462: "Action pas possible sur gestionnaire de médias",
+		498: "Il ya un bogue dans pianod",
+		499: "Non implémenté",
+		500: "Erreur de serveur interne",
+		501: "Rien à jouer",
+		502: "Échec Réseau",
+		503: "Service arrêt",
+		504: "L'échec de l'authentification",
+		505: "Ressources insufficent",
+		507: "Erreur de communication avec Pandora",
+		508: "Exécution de la commande incomplète",
+		509: "La permission a refusé",
+		510: "Exception",
+		511: "Temporisation Réseau",
+		512: "Impossible d'ouvrir la sortie audio",
+		'Bogus': 'Bogosity'
+	};
+
+
+
+	var MESSAGES = {
+			"ERROR_LOGIN_FAILED": "Procédure de connexion échouée",
+	"ERROR_CONNECTION_FAILED": "Connexion échouée.",
+	"ERROR_LOGIN_BAD_CREDENTIALS": "Mauvaises qualifications d'utilisateur.",
+	"CHECK_PORT_NUMBER": "Vérifiez le numéro de port.",
+	"LOGIN_SESSION_STARTING": "Connexion d'ouverture à %1$s.",
+	"LOGIN_SESSION_ENDED": "Session terminée.",
+	"STATUS_AUTHENTICATION_OK": "Authentication successful.",
+	
+
+		"HEADING_ALBUM": "Album",
+	
+		"HEADING_ARTIST": "artiste",
+	
+		"HEADING_SONG": "Titre",
+	
+		"HEADING_GENRE": "Genre",
+	
+		"HEADING_TYPE": "Type",
+	
+		"HEADING_SEEDTYPE": "Type de graine",
+	
+		"HEADING_PLAYLIST": "Liste de reproduction",
+	
+		"HEADING_YEAR": "Année",
+	
+		"HEADING_DURATION": "Durée",
+	
+		"HEADING_ACTION": "Actions",
+	
+
+				"Cap_song": "Chanson",
+	"Cap_artist": "Artiste",
+	"Cap_album": "Album",
+	"Cap_playlist": "Playlist",
+	
+
+		"lower_song": "chanson",
+	"lower_artist": "artiste",
+	"lower_album": "album",
+	"lower_playlist": "playlist",
+	
+
+
+
+				"PROMPT_CONFIRM_DELETE": "Êtes-vous sûr vous voulez-vous effacer %1$s ?",
+	"CONFIRM_DELETE": "%1$s effacé.",
+	"CONFIRM_ADD": "%1$s ajouté.",
+	"CONFIRM_ADDED_TO": "%1$s ajouté à %2$s.",
+	"CONFIRM_CREATE": "%1$s créé.",
+	"CONFIRM_RENAME": "%1$s renamed to %2$s.",
+	
+
+
+				"ACTION_TABLE_QUE": "+Liste",
+	"ACTION_TABLE_DEQUE": "✖Deque",
+	"ACTION_TABLE_SKIP": "Saut",
+	"ACTION_TABLE_SEED": "+Graine",
+	"ACTION_TABLE_UNSEED": "✖Retirez la graine",
+	
+
+
+
+				"CONFIRM_CLEAR_REQUESTS": "File d'attente de demandes effacée.",
+	"SELECT_PLAYLISTS_NONE": "Aucunes listes de reproduction",
+	"ERROR_NO_USABLE_SOURCES": "Aucunes sources utilisables.",
+	"CONFIRM_RATE_OVERPLAYED": "Estimation de chanson temporairement déclassifiée.",
+	"CONFIRM_ADD_SEED_TYPE_TO": "Graine ajoutée de %1$s à %2$s.",
+	"CONFIRM_DEQUEUED": "Musique demandée annulée.",
+	"INDICATOR_AUTOTUNING": "∫",
+	"STATUS_NOTHING_PLAYING": "There is nothing playing right now.",
+	"ERROR_QUEUEHISTORY_RANGE": "No further items.",
+	
+
+
+
+				"INFO_SEARCH_RESULTS_OMITTED": "Quelques résultats ont été omis :",
+	"ERROR_CHOOSE_PLAYLIST": "Veuillez choisir une liste de reproduction de cible.",
+	"ERROR_NEED_PLAYLIST_NAME": "Veuillez fournir un nom de liste de reproduction.",
+	"CONFIRM_QUEUED": "Demandes alignées.",
+	"ERROR_NEED_SEARCH_QUERY": "Veuillez écrire une requête de recherche.",
+	"MESSAGE_CREATE_WITH_ALL_RESULTS": "tous recherchent des résultats",
+	"MESSAGE_CREATE_APPLIES_TARGET": "s'applique à la source de cible",
+	
+
+
+
+				"ERROR_NO_SOURCES": "Veuillez fournir quelques sources.",
+	"ERROR_NEED_SOURCE_SELECTION": "Please choose a source.",
+	"ERROR_NEED_SOURCE_TYPE": "Please choose a source type.",
+	"CONFIRM_SOURCE_ADDED": "La source ajoutée, peut prendre un moment pour être prête.",
+	"CONFIRM_SOURCE_REMOVED": "Source removed.",
+	"CONFIRM_SOURCE_SELECTED": "Source choisie.",
+	
+
+		"ADDSOURCE_NULL_PATH": "Veuillez spécifier le chemin/dossier pour la musique.",
+	
+
+
+
+				"ACTION_SKIP": "Chanson de saut",
+	
+		"TOOLTIP_SKIP": "Sautez la chanson actuelle",
+	
+		"ACTION_DEQUEUE": "Dequeue",
+	
+		"TOOLTIP_DEQUEUE": "Cancel an upcoming song.",
+	
+		"ACTION_RECUE": "Chanson de demande",
+	
+		"TOOLTIP_RECUE": "Demandez cette chanson de nouveau.",
+	
+
+		"PROMPT_CREATE_PLAYLIST_FROM": "Créez la liste de reproduction de %1$s",
+	"PROMPT_ADD_SEED_FROM": "Ajoutez la graine de %1$s",
+	
+
+
+
+				"PROMPT_CONFIRM_DELETE_SEED": "Êtes-vous sûr vous voulez-vous retirer la graine pour %1$s ?",
+	"ERROR_SELECT_PLAYLIST": "Veuillez choisir une liste de reproduction.",
+	
+
+
+
+				"HEADING_LISTENERS_ONLINE": "Auditeurs en ligne:",
+	"ERROR_ACTIVITY_DISABLED": "Les messages d'activité sont handicapés.",
+	"ERROR_YELL_NO_MESSAGE": "Aucun message à hurler.",
+	
+
+
+
+				"PROMPT_OLD_PASSWORD": "Ancien mot de passe",
+	"PROMPT_NEW_PASSWORD": "Nouveau mot de passe",
+	"PROMPT_PIANOD_PASSWORD": "mot de passe de pianod",
+	"PROMPT_SYSTEM_PASSWORD": "Mot de passe de système",
+	
+
+		"PROMPT_CONFIRM_NO_PASSWORD": "Ceci effacera le mot de passe de %1$s ainsi ils peuvent ouvrir une session sans mot de passe. C'est peu sûr.  Êtes-vous sûr?",
+	"CONFIRM_USER_UPDATED": "Utilisateur %1$s actualisées.",
+	"CONFIRM_PASSWORD_CHANGE": "Le mot de passe a été mis à jour.",
+	"ERROR_CANNOT_GET_USER_LIST": "Ne peut pas rechercher la liste utilisateurs.",
+	"ERROR_PASSWORDS_UNMATCHED": "Les nouveaux mots de passe ne s'assortissent pas.",
+	"ERROR_SELECT_USER": "Veuillez choisir un utilisateur.",
+	"LABEL_KICK_VISITORS": "Tous les visiteurs",
+	"CONFIRM_KICK": "L'utilisateur %1$s a expulsé.",
+	
+
+		'Bogus': 'Bogosity'
+	};
+	
+	/* Private variables */
+
+	/* Private functions */
+	if (typeof (assert) == 'undefined') {
+		var assert = function () { };
+	}
+
+	/* Return a function object, which will see all of
+	   the above via the closure. */
+	Translate.prototype.translate = function (value) {
+		if (typeof (value) == 'string') {
+			// Translate a string
+			var message = value in MESSAGES ? MESSAGES [value] : value;
+			// Perform printf-style positional string substitutions.
+			for (var i = 1; i < arguments.length; i++) {
+				message = message.replace (RegExp ("%" + i + "\\$s", "g"), arguments [i]);
+			}
+			return message;
+		}
+		// Translate a Football comm response.
+		assert (arguments.length == 1);
+		assert (typeof (value) == 'object');
+		assert ('code' in value);
+		if (typeof (value) != 'object' || !('code' in value)) {
+			return 'Bad translation request';
+		}
+		if (!(value.code in ERRORS)) {
+			return value.text;
+		}
+		// Replace value up to first colon.
+		var pieces = value.text.split (':');
+		pieces [0] = ERRORS [value.code];
+		return pieces.join (':')
+	};
+	return Translate;
+}();
+

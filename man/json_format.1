@@ -1,0 +1,94 @@
+.\"Modified from man(1) of FreeBSD, the NetBSD mdoc.template, and mdoc.samples.
+.\"See Also:
+.\"man mdoc.samples for a complete listing of options
+.\"man mdoc for the short list of editing options
+.\"/usr/share/misc/mdoc.template
+.Dd 2021-02-11               \" DATE 
+.Dt json_format 1      \" Program name and manual section number 
+.Os UNIX/Linux/Darwin
+.Sh NAME                 \" Section Header - required - don't modify 
+.Nm json_format
+.\" The following lines are read in generating the apropos(man -k) database. Use only key
+.\" words here as the database is built based on the words here and in the .ND line. 
+.\" .Nm Other_name_for_same_program(),
+.\" .Nm Yet another name for the same program.
+.\" Use .Nm macro to designate other names for the documented program.
+.Nd JSON formatter, validator, and swiss army knife.
+.Sh SYNOPSIS             \" Section Header - required - don't modify
+.Nm
+.\" .Op Fl abcd          \" [-abcd]
+.Op Fl q
+.Op Fl t
+.Op Fl x
+.Op Fl n Ar name         \" [-p port] 
+.Op Fl s Ar schema       \" [-p port] 
+.Op Fl f Ar format       \" [-P httpport] 
+.\" .Op Ar                   \" [file ...]
+.\" .Ar arg0                 \" Underlined argument - use .Ar anywhere to underline
+.\" arg2 ...                 \" Arguments
+files ...
+.Sh DESCRIPTION          \" Section Header - required - don't modify
+.Nm
+formats, transforms and validates JSON files.
+.Pp
+If
+.Ar files
+are omitted,
+.Pa stdin
+is used instead.  Use redirection to put output into files.
+.Sh OPTIONS
+.Bl -tag -width "this much"
+.It Fl q
+Quiet.  When using the
+.Fl s
+option to perform validation, do not render a success message.
+.It Fl t
+Tidy JSON files.  This adjusts the indenting to 2 spaces per level, using
+all spaces.  Comments in the input are lost.  If
+compiled with
+.Fl DPARSNIP_DICTIONARY_SORTED ,
+object properties will be written in sorted order.
+.It Fl x
+Explain JSON schemas.  Parameters are JSON schemas, each of which is loaded
+and explanatory text provided describine the document structure, value
+ranges and types, etc.
+.It Fl f Ar format
+Flatten JSON files into a series of definitions, facilitating shell access
+or comparison of contents.
+.Ar format
+is either
+.Li dictionary ,
+which renders JSON object properties with array syntax,
+or
+.Li member ,
+which renders them as structure-member syntax (dot-name).
+Objects with no properties and arrays with no elements lose any representation.
+If compiled with
+.Fl DPARSNIP_DICTIONARY_SORTED ,
+object properties will be written in sorted order, making it possible to
+apply tools such as
+.Xr diff 1 .
+.It Fl n Ar name
+Use
+.Ar name
+as the variable name for
+.Fl f ,
+or as the descriptive text with
+.Fl x .
+If omitted, the filename is used instead.
+.It Fl s Ar schema
+Specifies a schema which is used to validate the specified files.
+.El                      \" Ends the list
+.Pp
+.Sh AUTHOR
+Perette Barella <perette@deviousfish.com>
+.Sh COPYRIGHT
+Copyright Perette Barella.
+.Nm
+is available under the MIT license.
+.Sh SEE ALSO 
+.\" List links in ascending order by section, alphabetically within a section.
+.\" Please do not reference files that do not exist without filing a bug report
+.Xr diff 1
+.\" .Sh BUGS              \" Document known, unremedied bugs 
+.\" .Sh HISTORY           \" Document history if command behaves in a unique manner

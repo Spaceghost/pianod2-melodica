@@ -1,0 +1,482 @@
+pianod2 ChangeLog
+=================
+
+For project status check the homepage: http://deviousfish.com/pianod2
+
+A list of major milestones since the project's inception can be found at:
+http://deviousfish.com/pianod2/milestones.html
+
+Detailed records of recent changes, as reported in SVN logs,
+are available at: http://deviousfish.com/pianod2/status.html#recentprogress
+
+r421 (2026-02-03):
+- Pandora: encrypt proxy & control proxy when stored.
+- Update systemd and other samples in contrib.
+- Update documentation.
+
+r420 (2025-12-28):
+- Build with ffmpeg 8.
+
+r417 (2025-12-27):
+Address various compile warnings:
+- blowfish: Fix compile warning about variable size arrays violating spec
+- ffmpeg: Deprecation warning: updated to new channel layout structure.
+- ffmpeg: Deprecation warning: use channel data from codec parameters instead of stream.
+
+r412 (2025-12-26):
+- Configure script & code changes for ffmpeg 6 compatibility
+- Fix crash when requesting an artist that only has songs on compilations.
+- Return compilation songs with their artists.
+- Fix free-while-needed bug with Pandora adverts.
+- Faster filesystem source startup on reload if index present
+- Comment false alarms detected by static analyzer.
+
+r410 (2025-01-09):
+- Fix metadata reader compilation problem on OS X.
+- Remove ffmpeg vs libav test (libav is good and dead)
+- Fix AVFoundation check - giving false negatives.
+- Football: Add greeting/TLS setup timeout to avoid lingering Internet probes.
+
+r406 (2024-07-04):
+- Pandora: don't crash if QuickMix contains stations that don't exist.
+- Parsnip: Add test for additionalProperties true, false, and a schema.
+
+r405 (2023-12-28):
+- Tone generator: reduce clicking at end of tones.
+- Rework instances of [optional] keywords.
+
+r404 (2023-11-22):
+- New logging flag: queue
+- Add command to update the algorithm for a playlist
+
+r403 (2023-11-20):
+- Fix bug whereby filesystem random song sets only ever had 1 song.
+
+r402 (2023-11-20):
+- Add a better interface to adjusting logging levels
+
+r401 (2023-11-17):
+- filesystem: provide song pathnames to administrators
+- library: provide playlist algorithms to owner
+- In client, adding song as artist seed to another station adds it as a
+  song seed.
+
+r400 (2023-11-16):
+- Add option to disable log timestamps; systemd journaling timestamps already
+- File source: Don't allow artist seeds for no-name artists
+- File source: Don't allow album seeds for no-name albums with no-name artists.
+- Fix lost of details on some error messaging.
+
+r399 (2023-11-14):
+- AVDeviceOutput: Fix crash or assertion after failure to open device.
+- Code clarity: Rename "successive_failures" to "sequential_failures".
+- Problem handling: Temporarily disable playback entirely or for a
+  problem source if there are repeated failures.
+
+r398 (2023-06-21):
+- Implement cross-fade when skipping
+- Fix infinite loop in music library song selection
+- Fix build error due to unnecessary include in gstreamer metadata reader.
+- Fix protocol bug when waiting on sources to become ready.
+- Allow audio driver setting to choose gstreamer sink type.
+
+r394 (2022-09-28):
+- Null-terminate the 2-character salt passed to crypt().
+- Fix crash when non-request sources are queried about requests.
+
+r393 (2022-09-23):
+- Update configure.ac for autoconf 2.71.
+- Viewer: Fix to ensure 'idle' class is shown when player is idle.
+
+r392 (2022-03-28):
+- Fixed failure to restore a source on startup to neither prevent startup
+  nor trigger uncaught exception.
+- Change other initialization exceptions to avoid uncaught exception abort.
+- Fix av_packet_init deprecation warnings.
+- Strip support for ffmpeg < 3.1, which was released ~6 years ago.
+- Improvements suggested by compilation warnings from Clang 13.
+- Fix macOS compilation failure: tiparm() not found on MacOS 10.15.
+
+r390 (2022-03-26):
+- Clean up source option extraction.
+- Rework source statistic reporting; JSON report was previously incomplete.
+- help renderer: correct mismatched brackets and option parser omissions.
+
+r389 (2022-03-09):
+- Close connection if error setting NOSIGPIPE.  Fixes spurrious exits on
+  BSD/MacOS.
+
+r388 (2021-12-20):
+- If unittest encounters MirKSH/mksh/other non-ksh93 shell, exit with test skipped status
+
+r387 (2021-12-19):
+- Fix crash when Pandora ads had no company name or no title.
+- Modernize code: Switch to #pragma once instead of #ifdefs
+- Clean the code: Remove all instances of using namespace std.
+
+r382 (2021-08-30):
+- JSON Protocol: Add missing JSON requests for source add/use/etc.
+- Pandora: Prime/Refresh cache if needed before getting song rating.
+- Update documentation, adding protocol overview and adding JSON
+request names to respective command overview.
+- Parsnip: Add PARSNIP_JSON_HEXADECIMAL_NUMBERS option.
+
+r381 (2021-08-27):
+- Fix bug in getHistory/getQueue requests with negative indicies.
+
+r379 (2021-05-24):
+
+- Add missing #include <memory> in audio output code, causing compile failure with GCC9.
+- Change linking flag "-lsdl" to "-lSDL"
+- Makefiles: Retrieve node.js paths with "npm config get prefix"
+- Makefiles: TypeScript: use "--moduleResolution node" to find jQuery definitions.
+- Fix compile errors generated by latest TypeScript compiler & jQuery definitions.
+- Football/WebSockets: Send PONG packets unmasked per RFC.
+Thanks to Martin Stumpf for identifying these issues and submitting patches.
+
+r376 (2021-04-17):
+- Fix some static analyzer complaints
+- Fix assert after Pandora request failed with error #0.
+
+r375 (2021-04-01):
+- Rework ThingieList and other collections to avoid template code bloat
+- Client-Console: Fix shutdown command
+
+r374 (2021-03-24):
+- Rework seeds/ratings handling for protocol omissions on
+  internal-tuner.pandora.com
+- Don't save altered source parameters unless asked to.
+
+r373 (2021-03-20):
+- Fix assertion when searching with a source that isn't ready
+- Fix problem/assertion when rating currently playing song
+- Reintegrate using old ("JSON v5") protocol
+
+r370 (2021-02-18):
+- JSON protocol: Add missing albumName on albums and songs
+- Client: deliver as ECMAScript 6; ditch Node.js toolchains.
+- Rewrite viewer using JSON protocol.
+
+r367 (2021-02-12):
+- Add "greeting=<none,brief,full>" option when connecting
+- JSON protocol: Fix several events being omitted
+- JSON protcol: Fix version number reporting
+- Parsnip: json_format: add flatten, validate options, man page
+- Schemas: allow additionalProperties schemas
+- Schemas: Better location reporting
+- Schema validation: Better location reporting
+
+r366 (2021-02-08):
+- Football: Fix rounding issue with fractional poll intervals.
+- Fix to ffmpeg/AVDevices output.
+- Implement JSON tranmission, document protocol.
+
+r362 (2021-02-02):
+- Refactor MusicThingie tranmission.
+- Football: Bug fix for service member count upon rejected connection.
+
+r361 (2021-01-31):
+- Football: Reject connections from 0.0.0.0 (occasional on MacOS)
+- Football: Fix buffer overflow in fb_unregister
+- Rework PLAY/SELECT commands/requests.
+- Parsnip: Allow keyword optionals at end of option sequence.
+
+r360 (2021-01-27):
+- Add pianod/Parsnip test compile with comments & file position enabled.
+- Client: Fix seed toggle buttons, which were always toggling song seed.
+- Rewrite Response() to retain original value type, not to_string() it.
+- Modify AggregateResponse to become ResponseCollector() and its friends,
+  DataResponse and CommandReply; funnel all responses through these.
+- Football: Add service option for ping interval.
+- Football: Send websocket close just before connection closure.
+- Football: Fix `pong` response, resolving spurious disconnects.
+- Fix docu-comment issues identified by Doxygen.
+
+r352 (2021-01-09):
+- Parsnip: Add RegEx to command line protocol
+- Unittest: don't enable color if running non-interactively
+- Address issues reported by static analyzer.
+
+r351 (2021-01-07):
+- Clean up/reformat Pandora message creation.
+- Parsnip: Implement schema creation from JSON Schema definitions.
+
+r350 (2020-12-30):
+- Workaround for Clang 8 error: default initialization of an object of
+  const type without a user-provided default constructor
+
+r349 (2020-12-30):
+- Implement JSON requests
+- Parsnip: Allow apostrope-demarked strings in JSON
+- Add JSON request support to `piano` shell script
+- Refactor away StringDictionary; keep source parameters in JSON dictionary.
+
+r347 (2020-12-14):
+- Reimplement help
+- Clean up some error formatting
+- Remove 'include' directory; modify #includes for Parsnip & Football
+
+r346 (2020-12-10):
+- Enable all warnings (-Wall) when configured with --enable-debug
+- Scrub warnings
+- Detect/set C++ standard for Objective C++ compiler
+
+r344 (2020-12-06):
+- Replace Football parser with Parsnip parser
+
+r343 (2020-06-08):
+- Fix Pandora items reporting as queueable when they aren't
+- Fix occasional Pandora search failures
+
+r336 (2020-05-05):
+- Merge Parsnip and m4/autconf changes from Proximmon
+- Update configure.ac to use new macros
+- Refactor MusicLibrary to reduce template use.
+
+r323 (2020-04-27):
+- Proximity: Add level checks around all logging.
+- Read configuration presence/departure parameters.
+- Better critical error handling.
+- Refactor to allow compilation without libdnet.
+- Add bluetooth support for OS X.
+
+r320 (2020-04-26):
+- Write man page for proximmon & proximmon-config
+
+r319 (2020-04-26):
+- configure: Improve ease of build with manually-installed ffmpeg
+- proximity: Implement IPv4 detection, bluetooth on Linux
+- proximity: General refactoring and architecture cleanup, fix thread safety
+
+r317 (2020-04-17):
+- Client, search pane: Fix search type request
+- Include utility to provide proximity tracking
+
+r316 (2020-04-15):
+- Store library/cache to disk, restore on startup, implement replay.
+- Fixes and improvements to Pandora source.
+- Filesystem source: Added genre aggregation.
+
+r312 (2020-04-11):
+- Fix session expiration timer bug.
+- Reimplement proxy support for Pandora
+- Update Pandora startup protocol documentation
+- Make copy of song before changing its station association.
+- Implement Pandora pause and resume notifications
+- Client: add to support for cache size setting, remove Pandora Plus checkbox
+- Audio engine: Set and lock queue mode in stopped upon shutdown notification
+
+r310 (2020-04-10):
+- Move to the Pandora REST API.
+- Replace the JSON library in Pandora.
+
+r309 (2020-03-24):
+- Parsnip: Rework asType() method.
+- Remove problematic assert in Pandora source triggered by refactoring in r307.
+
+r307 (2020-03-20):
+- Update config file to be able to detect other C++ standards flags.
+- Modify library chooser algorithm to not bias album selecton by track count.
+- Create Retainer <MusicThingie *>, refactor a few bits to use it.
+- Add asArtist, asAlbum, AsPlaylist & asSong to avoid some dynamic_cast penalties.
+- Parsnip: Fixes to avoid unnecessary copying.
+- Rename media to media_manager, Users to user_manager, UsersType to UserManager.
+- Convert global objects into pointers, Conductor initializes/destructs in required order.
+
+r306 (2020-03-17):
+- Move Parsnip range exceptions from JSON parsing to when accessed.
+- Remove XML reading code.
+- Refactor user data storage somewhat.
+- Fix race condition with flushing and global destruction sequence at shutdown.
+
+r304 (2020-03-15):
+- Replace XML datastores with JSON.  XML reading remains, allowing conversion
+  of existing data.
+
+r301 (2018-12-07):
+- Fix Pandora crash.
+
+r300 (2018-08-13):
+- Fix portability bug: missing #include in threadedmediaplayer.cpp.
+- Updates for FFmpeg 4.0 compatibility.
+
+r298 (2018-03-16):
+- Fixes for gzstream header-and-library detection
+
+r296 (2018-02-15):
+- libavdevices output: add flush timing controls to prevent audio cut-off or deadlock.
+- piano: do not include spurious output in data responses.
+- configure: check if explicit libc++ linking is required.
+
+r292 (2018-02-10):
+- Update piano script to reflect changes for pianod2 and add TLS.
+- Add TLS testing to test script.
+
+r291 (2018-02-07):
+- Football: Check file-serve pathname for symbolic links to other areas
+  outside path.
+- Fixed some minor memory leaks.
+
+r289 (2018-01-28):
+- Football: respect system hosts.allow, hosts.deny files (hosts_access(5)).
+
+r288 (2018-01-27):
+- Client internationalization: Link en_us files as en (no locale).
+  Include en, en_us in distribution.
+
+r286 (2018-01-22):
+- man page: document what happens when shadowing disabled.
+- Ignore SIGPIPE if we don't have SO_NOSIGPIPE, regardless of having
+  MSG_NOSIGNAL.  Fixes abort on TLS connections on Linux/mbedtls.
+- Football: OpenSSL: Use better SSL/TLS choices/ ideally TLS_server_method,
+  when available.
+- Client login: Fix broken guest/visitor login.
+
+r277 (2017-11-30):
+- Adjust timing issue in test script.
+- LibreSSL support.
+- Add Dejay privilege (allows requests/cancellations)
+- Refactor bidirectional coupling out of service manager/media manager.
+- Fix bug in filter generator for item matching on artist name.
+  Resolves seeding "Invalid parameter" and frequent "ambiguous match" issues.
+- Remove dead code.
+- Improvements to configure: check for header files, not just libraries.
+
+
+r268 (2017-03-27):
+- Improvements to tonegenerator left/right channel support
+- Fixes to history display in client
+- Enhancements to filter-to-query converter from aborted Spotify integration.
+- Fix queue management bug when cancelling upcoming songs.
+- Fixes for finding json.h header file.
+
+r261 (2017-01-29):
+
+- Fix unchecked exception thrown by GstreamerPlayer, improve reliability,
+  and avoid deadlocking Gstreamer with rapid state changes.
+- Increase Z-index of status/error messages to ensure they display.
+- Fix translation string for CONFIRM_ADDED_TO
+- Fix translate() function for multiple substitutions
+- Fix status reporting from track seed add/new playlist pop-up
+- Refactor TrackView to utilize data from QueueView, fix intermittent
+  end-of-track assertion from QueueView.
+- Strip assertions from client for release.
+
+r254 (2017-01-19):
+
+- pianod: Add transient playlist
+- Make ratings into enum class, refactor.  Update filter & autotuning to remove rounding/accept precise values.
+- filter: add toString() function, refactor
+- Football: accept apostrophe as quote to match filter grammar.
+- Football, filter: use double quote within quoted string to embed quote character.
+- Update client quote handling.
+- Add setting for preroll duration to audio options.  Added code to detect and complain when this applies.
+
+r253 (2017-01-11):
+
+- pianod: Add additional checks for requestable sources when expanding thingies to their songs, which could be weaseled past earlier checks using an ID predicate.
+- Trackview: add Feedback indicating autotuning enabled
+- Client: troubleshoot diagnostic reporting.
+
+r252 (2017-01-06):
+
+- Add a predicate form to select a different source
+- Added ways to forget & rename sources
+- Client: Corresponding changes to Source View.
+- Protocol: SOURCE DISCONNECT deprecates SOURCE DELETE.
+
+r251 (2017-01-04):
+
+- Display sort field indicators in table headings
+- Access to sort controls on small screens.
+- Rename playlists via Seed view
+- Check client for instances of "Pandora One" --> Pandora Plus
+
+r250 (2016-12-31):
+
+- Write langlint/internationalization checker tool.
+- Update translations.
+
+r249 (2016-12-30):
+
+- Enhance & rework internationalization.
+
+r248 (2016-12-29):
+
+- Refactor TableView out of seed & source views.
+- Implement queue view: Show history, current, and upcoming songs as list
+  in queue view.
+- QueueView: Dequeue/skip/repeat actions on each song.
+
+r247 (2016-12-27):
+
+- Playlist view: Correct display of "Play" activator, which was intermittent.
+- Trackview: Disable play/pause button when idle.
+- Trackview: album/artist names trigger search in searchview; song does
+  so when it's not being used for more information.
+- SourceView: Add success message on source removal.
+- SourceView: Corrections to field hiding.
+
+r246 (2016-12-26):
+
+- Seed view: clear results table when removing a playlist.
+- Search view: Implement create playlist from result set, both smart
+  and standard.
+- Pianod: Exit with error if -S (shadow) option given when build without support.
+- Console: Add privileges to player action buttons.  Add tooltip with
+  column name to numeric toggles.
+- Replace “X Remove seed” in seedview with button stylings for consistency
+
+r245 (2016-12-22):
+
+- Fix error/status to accept response and translate code.
+- Flash errors on-screen, so you know something went wrong even if the
+  status line is scrolled out of view.
+- Update showView() to accept a list of views, and use it to display most
+  useful views on client startup.
+- Refactor Comm.execute
+- Fixed scrolling within seedview.
+- Console: Allow hiding any field by number.
+
+r244 (2016-12-21):
+
+- Improved autoconf checks for shadowing mechanism and report decision in
+  summary.
+- Pianod: Remove overly tight assertion in authentication checks.
+- Fix trackview actions processing (prevented rating & seeding)
+
+r243 (2016-12-20):
+
+Track view additional actions pop-up:
+- Skip current song, dequeue displayed future song, replay historical song
+- Clear all requests
+- Randomization algorithm selector
+- Crossfade level & duration settings
+- Room chooser
+- Remove admin pane altogether.  Stop is in playlist selector,
+  play/pause on trackview, and shutdown becomes a console function.
+- Update Pandora One —> Pandora Plus
+
+r242 (2016-12-17):
+
+- Replace JavaScript with TypeScript
+- Change pop-up vertical location to fixed to put it on screen when needed.
+
+
+
+r211 (2016-04-27):
+
+Bugfixes: source restore, filter by genres, correct application quit.
+Improve reliability of OS X metadata reader.
+
+r208 (2016-04-13):
+
+As of r208, all 4 SSL libraries have been hand-tested on my Mac with `openssl s_client` and a few browsers; all work, although Chrome rejects SecureTransport’s TLS version.  On Raspbian, OpenSSL gives a warning about `SSL routines:SSL3_GET_RECORD:wrong version number:s3_pkt.c:359`, while GnuTLS tries but browsers reject SSL3.  Since both work fine on my Mac, I’m blaming the library and/or configuration.  I didn’t test mbed TLS on Linux.
+
+
+New dependency on cURL/libcurl for Pandora.  Football can now use
+GnuTLS, mbed TLS, OpenSSL or Apple’s SecureTransport.  Configure
+will choose one that's available; use `configure --with-tls=package`
+to force.  See INSTALL.
+
+

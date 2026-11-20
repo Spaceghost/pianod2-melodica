@@ -1,0 +1,1153 @@
+[ {
+    "name": "JSON Schema Example #1: Name & age",
+    "schema": {
+        "$id": "https://example.com/person.schema.json",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "Person",
+        "type": "object",
+        "properties": {
+            "firstName": {
+                "type": "string",
+                "description": "The person's first name."
+            },
+            "lastName": {
+                "type": "string",
+                "description": "The person's last name."
+            },
+            "age": {
+                "description": "Age in years which must be equal to or greater than zero.",
+                "type": "integer",
+                "minimum": 0
+            }
+        }
+    },
+    "tests": [ {
+        "name": "Valid data",
+        "data": {
+            "firstName": "John",
+            "lastName": "Doe",
+            "age": 21
+        },
+        "expected": "valid"
+    }, {
+        "name": "Extra junk tolerant",
+        "data": {
+            "firstName": "John",
+            "lastName": "Doe",
+            "age": 21,
+            "extra_junk": null
+        },
+        "expected": "valid"
+    }, {
+        "name": "Missing field tolerant",
+        "data": {
+            "firstName": "John",
+            "lastName": "Doe"
+        },
+        "expected": "valid"
+    }, {
+        "name": "Age is wrong datatype",
+        "data": {
+            "firstName": "John",
+            "lastName": "Doe",
+            "age": "twenty one"
+        },
+        "expected": "IncorrectDataType"
+    }, {
+        "name": "Name is wrong datatype",
+        "data": {
+            "firstName": 42,
+            "lastName": "Doe",
+            "age": 21
+        },
+        "expected": "IncorrectDataType"
+    } ]
+}, {
+    "name": "JSON Schema Example #2: Geographical location",
+    "schema": {
+        "$id": "https://example.com/geographical-location.schema.json",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "Longitude and Latitude Values",
+        "description": "A geographical coordinate.",
+        "required": [ "latitude", "longitude" ],
+        "type": "object",
+        "properties": {
+            "latitude": {
+                "type": "number",
+                "minimum": -90,
+                "maximum": 90
+            },
+            "longitude": {
+                "type": "number",
+                "minimum": -180,
+                "maximum": 180
+            }
+        }
+    },
+    "tests": [ {
+        "name": "Valid data",
+        "data": {
+            "latitude": 48.858093,
+            "longitude": 2.294694
+        },
+        "expected": "valid"
+    }, {
+        "name": "Missing longitude",
+        "data": {
+            "longitude": 2.294694
+        },
+        "expected": "NoSuchKey"
+    }, {
+        "name": "Missing latitude",
+        "data": {
+            "longitude": 2.294694
+        },
+        "expected": "NoSuchKey"
+    }, {
+        "name": "Longitude Out of range minimum",
+        "data": {
+            "longitude": -180.00001,
+            "latitude": 90
+        },
+        "expected": "NumberOutOfRange"
+    }, {
+        "name": "Longitude Out of range maximum",
+        "data": {
+            "longitude": 180.00001,
+            "latitude": 90
+        },
+        "expected": "NumberOutOfRange"
+    }, {
+        "name": "Latitude Out of range minimum",
+        "data": {
+            "longitude": 180,
+            "latitude": -90.00001
+        },
+        "expected": "NumberOutOfRange"
+    }, {
+        "name": "Latitude Out of range maximum",
+        "data": {
+            "longitude": 180,
+            "latitude": 90.00001
+        },
+        "expected": "NumberOutOfRange"
+    }, {
+        "name": "In range bottom",
+        "data": {
+            "longitude": -180,
+            "latitude": -90
+        },
+        "expected": "valid"
+    }, {
+        "name": "In range top",
+        "data": {
+            "longitude": 180,
+            "latitude": 90
+        },
+        "expected": "valid"
+    } ]
+}, {
+    "name": "JSON dependencies",
+    "schema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "type": "object",
+
+      "properties": {
+          "name": { "type": "string" },
+          "credit_card": { "type": "number" },
+          "billing_address": { "type": "string" }
+      },
+
+      "required": ["name"],
+
+      "dependencies": {
+          "credit_card": ["billing_address"]
+      }
+    },
+    "tests": [ {
+        "name": "Full data",
+        "data": {
+            "name": "John Doe",
+            "credit_card": 5555555555555555,
+            "billing_address": "555 Debtor's Lane"
+        },
+        "expected": "valid"
+    }, {
+        "name": "Just name",
+        "data": {
+            "name": "John Doe"
+        },
+        "expected": "valid"
+    }, {
+        "name": "Missing dependency",
+        "data": {
+            "name": "John Doe",
+            "credit_card": 5555555555555555
+        },
+        "expected": "NoSuchKey"
+    }, {
+        "name": "No dependency problems",
+        "data": {
+            "name": "John Doe",
+            "billing_address": "555 Debtor's Lane"
+        },
+        "expected": "valid"
+    } ]
+}, {
+    "name": "(Modified) JSON Schema Example #3: Arrays",
+    "schema": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+            "fruits": {
+                "type": "array",
+                "items": {
+                    "type": "string",
+                    "enum": ["tomato", "apple", "orange", "pear", "banana"]
+                }
+            },
+            "vegetables": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "required": [ "veggieName", "veggieLike" ],
+                    "properties": {
+                        "veggieName": {
+                            "type": "string",
+                            "enum": ["potato", "green bean", "broccoli", "corn"],
+                            "description": "The name of the vegetable."
+                        },
+                        "veggieLike": {
+                            "type": "boolean",
+                            "description": "Do I like this vegetable?"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "tests": [ {
+        "name": "Valid data",
+        "data": {
+            "fruits": [ "apple", "orange", "pear" ],
+            "vegetables": [
+                {
+                    "veggieName": "potato",
+                    "veggieLike": true
+                },
+                {
+                    "veggieName": "broccoli",
+                    "veggieLike": false
+                }
+            ]
+        },
+        "expected": "valid"
+    }, {
+        "name": "Empty set",
+        "data": {},
+        "expected": "valid"
+    }, {
+        "name": "Potato is not a fruit",
+        "data": {
+            "fruits": [ "apple", "orange", "pear", "potato" ]
+        },
+        "expected": "InvalidValue"
+    }, {
+        "name": "Missing array wrapper",
+        "data": {
+            "fruits": "apple"
+        },
+        "expected": "IncorrectDataType"
+    }, {
+        "name": "Incomplete vegetables",
+        "data": {
+            "vegetables": [
+                {
+                    "veggieName": "potato",
+                    "veggieLike": true
+                },
+                {
+                    "veggieLike": false
+                }
+            ]
+        },
+        "expected": "NoSuchKey"
+    } ]
+}, {
+    "name": "Meticulous tests: String",
+    "schema": {
+        "$schema": "custom",
+        "type": "string",
+        "minLength": 5,
+        "maxLength": 8
+    },
+    "tests": [ {
+        "name": "not nullable",
+        "data": null,
+        "expected": "IncorrectDataType"
+    }, {
+        "name": "inside minimum",
+        "data": "hello",
+        "expected": "valid"
+    }, {
+        "name": "inside maximum",
+        "data": "hellomom",
+        "expected": "valid"
+    }, {
+        "name": "too short",
+        "data": "helo",
+        "expected": "InvalidValue"
+    }, {
+        "name": "too long",
+        "data": "hello mom",
+        "expected": "InvalidValue"
+   } ]
+}, {
+    "name": "Meticulous tests: Keyword",
+    "schema": {
+        "$schema": "custom",
+        "type": "string",
+        "enum": [ "foo", "bar" ]
+    },
+    "tests": [ {
+        "name": "not nullable",
+        "data": null,
+        "expected": "IncorrectDataType"
+    }, {
+        "name": "Test value",
+        "data": "foo",
+        "expected": "valid"
+    }, {
+        "name": "Test other value",
+        "data": "bar",
+        "expected": "valid"
+    }, {
+        "name": "Wrong value",
+        "data": "bat",
+        "expected": "InvalidValue"
+    }, {
+        "name": "Wrong case",
+        "data": "Foo",
+        "expected": "InvalidValue"
+   } ]
+}, {
+    "name": "Meticulous tests: Const",
+    "schema": {
+        "$schema": "custom",
+        "type": "string",
+        "const": "ichi"
+    },
+    "tests": [ {
+        "name": "not nullable",
+        "data": null,
+        "expected": "IncorrectDataType"
+    }, {
+        "name": "Test value",
+        "data": "ichi",
+        "expected": "valid"
+    }, {
+        "name": "Test other value",
+        "data": "ban",
+        "expected": "InvalidValue"
+   } ]
+}, {
+    "name": "Meticulous tests: RegEx",
+    "schema": {
+        "$schema": "custom",
+        "type": "string",
+        "pattern": "[A-Z][a-z0-9]*[.?!]"
+    },
+    "tests": [ {
+        "name": "not nullable",
+        "data": null,
+        "expected": "IncorrectDataType"
+    }, {
+        "name": "Shortest possible",
+        "data": "A!",
+        "expected": "valid"
+    }, {
+        "name": "inside maximum",
+        "data": "Arrrrtghghgh1111!",
+        "expected": "valid"
+    }, {
+        "name": "Regex invalid front",
+        "data": "8Arrrg!",
+        "expected": "InvalidValue"
+    }, {
+        "name": "Regex invalid middle",
+        "data": "Ar{17}gh!",
+        "expected": "InvalidValue"
+    }, {
+        "name": "Regex invalid tail 1",
+        "data": "Arrrg!!",
+        "expected": "InvalidValue"
+    }, {
+        "name": "Regex invalid tail 2",
+        "data": "Arrrg",
+        "expected": "InvalidValue"
+    }, {
+        "name": "Regex case sensitivity",
+        "data": "ArrRg.",
+        "expected": "InvalidValue"
+   } ]
+}, {
+    "name": "Meticulous tests: Exclusive range #1",
+    "schema": {
+        "$schema": "custom",
+        "type": "number",
+        "minimum": 0,
+        "exclusiveMaximum": 100
+    },
+    "tests": [ {
+        "name": "not nullable",
+        "data": null,
+        "expected": "IncorrectDataType"
+    }, {
+        "name": "Inside low",
+        "data": 0,
+        "expected": "valid"
+    }, {
+        "name": "Inside high",
+        "data": 99.9999999,
+        "expected": "valid"
+    }, {
+        "name": "Outside low",
+        "data": -0.0000001,
+        "expected": "NumberOutOfRange"
+    }, {
+        "name": "Outside high",
+        "data": 100,
+        "expected": "NumberOutOfRange"
+    } ]
+}, {
+    "name": "Meticulous tests: Exclusive range #2",
+    "schema": {
+        "$schema": "custom",
+        "type": "integer",
+        "exclusiveMinimum": 0,
+        "maximum": 100
+    },
+    "tests": [ {
+        "name": "not nullable",
+        "data": null,
+        "expected": "IncorrectDataType"
+    }, {
+        "name": "Inside low",
+        "data": 1,
+        "expected": "valid"
+    }, {
+        "name": "Inside high",
+        "data": 100,
+        "expected": "valid"
+    }, {
+        "name": "Outside low",
+        "data": 0,
+        "expected": "NumberOutOfRange"
+    }, {
+        "name": "Outside high",
+        "data": 101,
+        "expected": "NumberOutOfRange"
+    } ]
+}, {
+    "name": "Meticulous tests: Integer multiples",
+    "schema": {
+        "$schema": "custom",
+        "type": "integer",
+        "multiple": 3
+    },
+    "tests": [ {
+        "name": "Small multiple",
+        "data": 6,
+        "expected": "valid"
+    }, {
+        "name": "Large multiple",
+        "data": 157248,
+        "expected": "valid"
+    }, {
+        "name": "Not multiple",
+        "data": 7,
+        "expected": "NumberOutOfRange"
+    }, {
+        "name": "Not multiple #2",
+        "data": 157250,
+        "expected": "NumberOutOfRange"
+    } ]
+}, {
+    "name": "Meticulous tests: List",
+    "schema": {
+        "$schema": "custom",
+        "type": "array",
+        "items": { "type": "string"},
+    },
+    "tests": [ {
+        "name": "nullability test",
+        "data": null,
+        "expected": "IncorrectDataType"
+    }, {
+        "name": "List good",
+        "data": [ "foo", "bar" ],
+        "expected": "valid"
+    }, {
+        "name": "Non-array bad",
+        "data": "foo",
+        "expected": "IncorrectDataType"
+    }, {
+        "name": "Wrong array contents also bad",
+        "data": [ "foo", 7, "bar" ],
+        "expected": "IncorrectDataType"
+    } ]
+}, {
+    "name": "Meticulous tests: Dictionary",
+    "schema": {
+        "$schema": "custom",
+        "type": "object",
+        "properties": {
+            "pet": {
+                "type": "string",
+                "enum": ["dog", "cat", "snake" ]
+            },
+            "meat": {
+                "type": "string",
+                "enum": ["chicken", "beef", "pork"]
+            },
+            "amount": {
+                "type": "number"
+            },
+            "currency": {
+                "type": "string"
+            }
+        },
+        "minProperties": 2,
+        "maxProperties": 3,
+        "additionalProperties": false
+    },
+    "tests": [ {
+        "name": "nullability test",
+        "data": null,
+        "expected": "IncorrectDataType"
+    }, {
+        "name": "Not enough",
+        "data": { "pet": "cat" },
+        "expected": "InvalidValue"
+    }, {
+        "name": "Just enough",
+        "data": { "meat": "beef", "amount": 3.4},
+        "expected": "valid"
+    }, {
+        "name": "Upper capacity limit",
+        "data": { "meat": "beef", "amount": 3.4, "currency": "euro"},
+        "expected": "valid"
+    }, {
+        "name": "Over capacity",
+        "data": { "meat": "beef", "amount": 3.4, "currency": "euro", "pet": "cat"},
+        "expected": "InvalidValue"
+    }, {
+        "name": "Extra cruft forbidden",
+        "data": { "meat": "beef", "amount": 3.4, "hoarding": "upset"},
+        "expected": "InvalidKey"
+    } ]
+}, {
+    "name": "Meticulous tests: Nullable String",
+    "schema": {
+        "$schema": "custom",
+        "type": "string",
+        "nullable": true
+    },
+    "tests": [ {
+        "name": "nullability test",
+        "data": null,
+        "expected": "valid"
+    }, {
+        "name": "String ok",
+        "data": "hello",
+        "expected": "valid"
+    }, {
+        "name": "Integer bad",
+        "data": 4,
+        "expected": "IncorrectDataType"
+   } ]
+}, {
+    "name": "Meticulous tests: Nullable, Case Insensitive Keyword",
+    "schema": {
+        "$schema": "custom",
+        "type": "string",
+        "nullable": true,
+        "ignoreCase": true,
+        "enum": [ "foo", "bar" ]
+    },
+    "tests": [ {
+        "name": "nullability",
+        "data": null,
+        "expected": "valid"
+    }, {
+        "name": "Test value",
+        "data": "FoO",
+        "expected": "valid"
+    }, {
+        "name": "Test other value",
+        "data": "bAr",
+        "expected": "valid"
+    }, {
+        "name": "Wrong value",
+        "data": "bat",
+        "expected": "InvalidValue"
+   } ]
+}, {
+    "name": "Meticulous tests: Nullable Case Insensitive RegEx",
+    "schema": {
+        "$schema": "custom",
+        "type": "string",
+        "nullable": true,
+        "ignoreCase": true,
+        "pattern": "[A-Z][A-Za-z0-9]*[.?!]"
+    },
+    "tests": [ {
+        "name": "nullability test",
+        "data": null,
+        "expected": "valid"
+    }, {
+        "name": "Shortest possible",
+        "data": "A!",
+        "expected": "valid"
+    }, {
+        "name": "Integer bad",
+        "data": 4,
+        "expected": "IncorrectDataType"
+   } ]
+}, {
+    "name": "Meticulous tests: Nullable Number",
+    "schema": {
+        "$schema": "custom",
+        "type": "number",
+        "nullable": true
+    },
+    "tests": [ {
+        "name": "nullability test",
+        "data": null,
+        "expected": "valid"
+    }, {
+        "name": "Number good",
+        "data": 77,
+        "expected": "valid"
+    }, {
+        "name": "Integer good",
+        "data": 77.7,
+        "expected": "valid"
+    }, {
+        "name": "Mixed case okay",
+        "data": "TheCastleArrrrrrgh!",
+        "expected": "IncorrectDataType"
+    } ]
+}, {
+    "name": "Meticulous tests: Nullable Integer",
+    "schema": {
+        "$schema": "custom",
+        "type": "integer",
+        "nullable": true
+    },
+    "tests": [ {
+        "name": "nullability test",
+        "data": null,
+        "expected": "valid"
+    }, {
+        "name": "Number (real) bad",
+        "data": 1.5,
+        "expected": "IncorrectDataType"
+    }, {
+        "name": "Integer good",
+        "data": 100,
+        "expected": "valid"
+    }, {
+        "name": "String bad",
+        "data": "Arrr matey!  A pirate walked into a bar and ordered negative 1 beers.",
+        "expected": "IncorrectDataType"
+    } ]
+}, {
+    "name": "Meticulous tests: Nullable Boolean",
+    "schema": {
+        "$schema": "custom",
+        "type": "boolean",
+        "nullable": true
+    },
+    "tests": [ {
+        "name": "nullability test",
+        "data": null,
+        "expected": "valid"
+    }, {
+        "name": "True good",
+        "data": true,
+        "expected": "valid"
+    }, {
+        "name": "False good",
+        "data": false,
+        "expected": "valid"
+    }, {
+        "name": "String bad",
+        "data": "true",
+        "expected": "IncorrectDataType"
+    } ]
+}, {
+    "name": "Meticulous tests: Nullable List",
+    "schema": {
+        "$schema": "custom",
+        "type": "array",
+        "items": { "type": "string"},
+        "nullable": true
+    },
+    "tests": [ {
+        "name": "nullability test",
+        "data": null,
+        "expected": "valid"
+    }, {
+        "name": "List good",
+        "data": [ "foo", "bar" ],
+        "expected": "valid"
+    }, {
+        "name": "Non-array bad",
+        "data": "foo",
+        "expected": "IncorrectDataType"
+    } ]
+}, {
+    "name": "Conjunction tests: any of",
+    "schema": {
+        "$schema": "names and stuff",
+        "type": "object",
+        "additionalProperties": false,
+        "anyOf": [
+            {
+                "properties": {
+                    "type": {
+                        "type": "string",
+                        "const": "person"
+                    },
+                    "name_family": {
+                        "type": "string"
+                    },
+                    "name_given": {
+                        "type": "string"
+                    },
+                    "phone_number": {
+                        "type": "integer"
+                    },
+                },
+                "required": [ "type", "name_given", "name_family" ]
+            }, {
+                "properties": {
+                    "type": {
+                        "type": "string",
+                        "const": "pet"
+                    },
+                    "name_given": {
+                        "type": "string"
+                    },
+                    "species": {
+                        "type": "string"
+                    }
+                },
+                "required": [ "type", "name_given", "species" ]
+            }
+        ]
+    },
+    "tests": [ {
+        "name": "Valid Person",
+        "data": {
+            "type": "person",
+            "name_family": "Bolton",
+            "name_given": "Michael"
+        },
+        "expected": "valid"
+    }, {
+        "name": "Valid Pet",
+        "data": {
+            "type": "pet",
+            "species": "Felis catus",
+            "name_given": "Vit vit"
+        },
+        "expected": "valid"
+    }, {
+        "name": "Person with pet info",
+        "data": {
+            "type": "person",
+            "species": "Homo sapiens",
+            "name_given": "Biff"
+        },
+        "expected": "InvalidValue"
+    }, {
+        "name": "Cat with extra person info",
+        "data": {
+            "type": "pet",
+            "species": "Felis Catus",
+            "name_family": "Thanxamillion",
+            "name_given": "Maxamillion"
+        },
+        "expected": "InvalidValue"
+    } ]
+}, {
+    "name": "Conjunction tests: any of #2",
+    "schema": {
+        "$schema": "multiples",
+        "type": "integer",
+        "additionalProperties": false,
+        "anyOf": [
+            {
+                "multiple": 3
+            }, {
+                "multiple": 5
+            }
+        ]
+    },
+    "tests": [ {
+        "name": "Multiple of 3",
+        "data": 9,
+        "expected": "valid"
+    }, {
+        "name": "Multiple of 5",
+        "data": 10,
+        "expected": "valid"
+    }, {
+        "name": "Multiple of both",
+        "data": 15,
+        "expected": "valid"
+    }, {
+        "name": "Prime number",
+        "data": 13,
+        "expected": "InvalidValue"
+    } ]
+}, {
+    "name": "Conjunction tests: all of",
+    "schema": {
+        "$schema": "multiples",
+        "type": "integer",
+        "additionalProperties": false,
+        "allOf": [
+            {
+                "multiple": 3
+            }, {
+                "multiple": 5
+            }
+        ]
+    },
+    "tests": [ {
+        "name": "Multiple of 3",
+        "data": 9,
+        "expected": "NumberOutOfRange"
+    }, {
+        "name": "Multiple of 5",
+        "data": 10,
+        "expected": "NumberOutOfRange"
+    }, {
+        "name": "Multiple of both",
+        "data": 15,
+        "expected": "valid"
+    }, {
+        "name": "Prime number",
+        "data": 13,
+        "expected": "NumberOutOfRange"
+    } ]
+}, {
+    "name": "Conjunction tests: oneOf",
+    "schema": {
+        "$schema": "multiples",
+        "type": "integer",
+        "additionalProperties": false,
+        "oneOf": [
+            {
+                "multiple": 3
+            }, {
+                "multiple": 5
+            }
+        ]
+    },
+    "tests": [ {
+        "name": "Multiple of 3",
+        "data": 9,
+        "expected": "valid"
+    }, {
+        "name": "Multiple of 5",
+        "data": 10,
+        "expected": "valid"
+    }, {
+        "name": "Multiple of both",
+        "data": 15,
+        "expected": "InvalidValue"
+    }, {
+        "name": "Prime number",
+        "data": 13,
+        "expected": "InvalidValue"
+    } ]
+}, {
+    "name": "Conjunction tests: not (a dictionary)",
+    "schema": {
+        "$schema": "not a dictionary",
+        "additionalProperties": false,
+        "not": {
+                "type": "object"
+        }
+    },
+    "tests": [ {
+        "name": "Number is not a dictonary",
+        "data": 9,
+        "expected": "valid"
+    }, {
+        "name": "List is not a dictionary",
+        "data": [ 3, 5, "fish" ],
+        "expected": "valid"
+    }, {
+        "name": "Null is not a dictionary",
+        "data": null,
+        "expected": "valid"
+    }, {
+        "name": "An empty dictionary is invalid",
+        "data": {},
+        "expected": "InvalidValue"
+    } ]
+}, {
+    "name": "Regex built-in patterns: date",
+    "schema": {
+        "$schema": "custom",
+        "type": "string",
+        "format": "date"
+      },
+      "tests": [ {
+          "name": "Valid date #2",
+          "data": "0001-01-01",
+          "expected": "valid"
+      }, {
+          "name": "Valid date #3",
+          "data": "9999-09-31",
+          "expected": "valid"
+      }, {
+          "name": "Valid date #4",
+          "data": "2018-10-31",
+          "expected": "valid"
+      }, {
+          "name": "Valid date #5",
+          "data": "2018-12-01",
+          "expected": "valid"
+      }, {
+          "name": "Invalid date #6",
+          "data": "2018-00-01",
+          "expected": "InvalidValue"
+      }, {
+          "name": "Invalid date #7",
+          "data": "2018-13-00",
+          "expected": "InvalidValue"
+      }, {
+          "name": "trailing junk",
+          "data": "2018-11-13junk",
+          "expected": "InvalidValue"
+      }, {
+          "name": "too short",
+          "data": "2018-11-1",
+          "expected": "InvalidValue"
+      }, {
+          "name": "leading junk",
+          "data": "x2018-11-13",
+          "expected": "InvalidValue"
+      }, {
+          "name": "bad format",
+          "data": "201-811-13",
+          "expected": "InvalidValue"
+      } ]
+}, {
+    "name": "Regex built-in patterns: Time",
+    "schema": {
+        "$schema": "custom",
+        "type": "string",
+        "format": "time"
+      },
+      "tests": [ {
+          "name": "Valid #1",
+          "data": "00:00:00+00:00",
+          "expected": "valid"
+      }, {
+          "name": "Valid #2",
+          "data": "23:59:59+09:59",
+          "expected": "valid"
+      }, {
+          "name": "Time zone too far out",
+          "data": "23:00:00+14:00",
+          "expected": "InvalidValue"
+      }, {
+          "name": "Hours to large",
+          "data": "24:00:00+12:00",
+          "expected": "InvalidValue"
+      }, {
+          "name": "Minutes to large",
+          "data": "24:60:00+12:00",
+          "expected": "InvalidValue"
+      }, {
+          "name": "Seconds to large",
+          "data": "00:00:67+12:00",
+          "expected": "InvalidValue"
+      }, {
+          "name": "trailing junk",
+          "data": "11:37:49+00:00x",
+          "expected": "InvalidValue"
+      }, {
+          "name": "too short",
+          "data": "10:37:43+00:3",
+          "expected": "InvalidValue"
+      }, {
+          "name": "leading junk",
+          "data": "x11:37:29+00:00",
+          "expected": "InvalidValue"
+      }, {
+          "name": "bad format",
+          "data": "23fred77+11:11",
+          "expected": "InvalidValue"
+      } ]
+}, {
+    "name": "Regex built-in patterns: DateTime",
+    "schema": {
+        "$schema": "custom",
+        "type": "string",
+        "format": "date-time"
+      },
+      "tests": [ {
+          "name": "Valid #1",
+          "data": "2020-03-35T00:00:00+00:00",
+          "expected": "valid"
+     }, {
+          "name": "bad format",
+          "data": "No",
+          "expected": "InvalidValue"
+      } ]
+}, {
+    "name": "Regex built-in patterns: email",
+    "schema": {
+        "$schema": "custom",
+        "type": "string",
+        "format": "email"
+      },
+      "tests": [ {
+          "name": "Valid",
+          "data": "perette@deviousfish.com",
+          "expected": "valid"
+      }, {
+          "name": "Valid #2",
+          "data": "user@somedomain.something.something",
+          "expected": "valid"
+      }, {
+          "name": "Missing domain component",
+          "data": "foobar",
+          "expected": "InvalidValue"
+      }, {
+          "name": "no name",
+          "data": "@deviousfish.com",
+          "expected": "InvalidValue"
+      }, {
+          "name": "weird characters",
+          "data": "alpha@fr?og.com",
+          "expected": "InvalidValue"
+      }, {
+          "name": "No domain structure",
+          "data": "foo@bar",
+          "expected": "InvalidValue"
+      } ]
+}, {
+    "name": "Regex built-in patterns: ipv4",
+    "schema": {
+        "$schema": "custom",
+        "type": "string",
+        "format": "ipv4"
+      },
+      "tests": [ {
+          "name": "Valid",
+          "data": "99.199.249.255",
+          "expected": "valid"
+      }, {
+          "name": "Valid #2",
+          "data": "1.1.1.1",
+          "expected": "valid"
+      }, {
+          "name": "Too many dots",
+          "data": "104.104.104.104.104",
+          "expected": "InvalidValue"
+      }, {
+          "name": "Too few dots",
+          "data": "104.1.104",
+          "expected": "InvalidValue"
+      }, {
+          "name": "Number too big",
+          "data": "244.244.2444.7",
+          "expected": "InvalidValue"
+      }, {
+          "name": "Number out of range",
+          "data": "244.244.260.33",
+          "expected": "InvalidValue"
+      }, {
+          "name": "Number out of range 2",
+          "data": "255.255.256.0",
+          "expected": "InvalidValue"
+      } ]
+}, {
+    "name": "Regex built-in patterns: ipv6",
+    "schema": {
+        "$schema": "custom",
+        "type": "string",
+        "format": "ipv6"
+      },
+      "tests": [ {
+          "name": "Valid IPv6",
+          "data": "fda8:e110:7bdb:0:8cb8:4d3:acd6:61a8",
+          "expected": "valid"
+      }, {
+          "name": "Valid IPv6 compressed",
+          "data": "fe80::479e:3fc:271d:88e2",
+          "expected": "valid"
+      }, {
+          "name": "IPv4 address",
+          "data": "104.104.104.104",
+          "expected": "InvalidValue"
+      }, {
+          "name": "IPv4 as IPv6 address",
+          "data": "::ffff:1234:104.104.104.104",
+          "expected": "InvalidValue"
+      }, {
+          "name": "Something else",
+          "data": "Whale",
+          "expected": "InvalidValue"
+      } ]
+}, {
+    "name": "Regex built-in patterns: URI",
+    "schema": {
+        "$schema": "custom",
+        "type": "string",
+        "format": "uri"
+      },
+      "tests": [ {
+          "name": "Valid URI",
+          "data": "http://deviousfish",
+          "expected": "valid"
+      }, {
+          "name": "Valid HTTP URI with path",
+          "data": "http://holycow.com/some/location",
+          "expected": "valid"
+      }, {
+          "name": "File URI",
+          "data": "file://home/foobar/public",
+          "expected": "valid"
+      }, {
+          "name": "HTTP secure URI",
+          "data": "http://sekur.deviousfish.com",
+          "expected": "valid"
+      }, {
+          "name": "IPv4 URL",
+          "data": "http://104.104.104.104/foo/bar",
+          "expected": "valid"
+      }, {
+          "name": "Something else",
+          "data": "Whales/swim",
+          "expected": "InvalidValue"
+      } ]
+}, {
+    "name": "Unnamed Test",
+    "schema": {
+        "$schema": "Unnamed",
+        "type": "any"
+    },
+    "tests": [
+    ]
+} ]
+
